@@ -64,6 +64,18 @@
             <artifactId>asciitable</artifactId>
             <version>0.3.2</version>
         </dependency>
+        
+        <!-- JLine3 for advanced CLI features -->
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-terminal</artifactId>
+            <version>3.24.1</version>
+        </dependency>
+        <dependency>
+            <groupId>org.jline</groupId>
+            <artifactId>jline-reader</artifactId>
+            <version>3.24.1</version>
+        </dependency>
     </dependencies>
 
     <build>
