@@ -64,8 +64,8 @@ fun main() {
                     val users = userService.listAllUsers()
                     println("${Colors.GREEN}${TableFormatter.formatUsersTable(users)}${Colors.RESET}")
                 }
-                input.lowercase().startsWith("users list \"") && input.endsWith("\"") -> {
-                    val searchTerm = input.substring(12, input.length - 1)
+                input.lowercase().startsWith("users list ") -> {
+                    val searchTerm = input.substring(11) // "users list ".length = 11
                     val users = userService.searchUsers(searchTerm)
                     println("${Colors.GREEN}${TableFormatter.formatUsersTable(users)}${Colors.RESET}")
                 }
@@ -106,7 +106,7 @@ private fun showHelp() {
     println("${Colors.BOLD}${Colors.CYAN}Available commands:${Colors.RESET}")
     println("  ${Colors.YELLOW}echo${Colors.RESET} ${Colors.DIM}<message>${Colors.RESET}         - Echo the message back")
     println("  ${Colors.YELLOW}users list${Colors.RESET}              - List all users")
-    println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}\"<search>\"${Colors.RESET}   - Search for users by name")
+    println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}     - Search for users by name")
     println("  ${Colors.YELLOW}help${Colors.RESET}                    - Show this help")
     println("  ${Colors.YELLOW}quit/exit${Colors.RESET}               - Exit the shell")
     println()
