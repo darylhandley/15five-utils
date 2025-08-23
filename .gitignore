@@ -28,3 +28,6 @@ replay_pid*
 
 .idea/
 target/
+
+# Configuration files with sensitive data
+application.properties

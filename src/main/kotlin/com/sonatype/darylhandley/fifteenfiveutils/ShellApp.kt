@@ -1,44 +1,79 @@
 package com.sonatype.darylhandley.fifteenfiveutils
 
+import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
+import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
+import com.sonatype.darylhandley.fifteenfiveutils.util.TableFormatter
+
+object Colors {
+    const val RESET = "\u001B[0m"
+    const val BLUE = "\u001B[34m"
+    const val GREEN = "\u001B[32m"
+    const val YELLOW = "\u001B[33m"
+    const val RED = "\u001B[31m"
+    const val CYAN = "\u001B[36m"
+    const val BOLD = "\u001B[1m"
+    const val DIM = "\u001B[2m"
+}
+
 fun main() {
-    println("15Five Utils Shell - Type 'help' for commands or 'quit' to exit")
+    println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' for commands or '${Colors.YELLOW}quit${Colors.RESET}' to exit")
+    println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
+    
+    val userService = try {
+        UserService(ConfigLoader.getSessionId())
+    } catch (e: Exception) {
+        println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
+        return
+    }
     
     var running = true
     
     while (running) {
-        print("> ")
+        print("${Colors.BLUE}15five${Colors.RESET}${Colors.DIM}>${Colors.RESET} ")
         val input = readLine()?.trim() ?: continue
         
         if (input.isEmpty()) continue
         
-        val parts = input.split(" ", limit = 2)
-        val command = parts[0].lowercase()
-        
-        when (command) {
-            "echo" -> {
-                if (parts.size > 1) {
-                    println(parts[1])
-                } else {
-                    println("echo: missing argument")
-                }
+        when {
+            input.lowercase() == "users list" -> {
+                val users = userService.listAllUsers()
+                println("${Colors.GREEN}${TableFormatter.formatUsersTable(users)}${Colors.RESET}")
             }
-            "quit", "exit" -> {
-                println("Goodbye!")
+            input.lowercase().startsWith("users list \"") && input.endsWith("\"") -> {
+                val searchTerm = input.substring(12, input.length - 1)
+                val users = userService.searchUsers(searchTerm)
+                println("${Colors.GREEN}${TableFormatter.formatUsersTable(users)}${Colors.RESET}")
+            }
+            input.lowercase().startsWith("echo ") -> {
+                val message = input.substring(5)
+                println("${Colors.GREEN}$message${Colors.RESET}")
+            }
+            input.lowercase() == "echo" -> {
+                println("${Colors.RED}echo: missing argument${Colors.RESET}")
+            }
+            input.lowercase() == "quit" || input.lowercase() == "exit" -> {
+                println("${Colors.YELLOW}Goodbye!${Colors.RESET}")
                 running = false
             }
-            "help" -> {
+            input.lowercase() == "help" -> {
                 showHelp()
             }
             else -> {
-                println("Unknown command: $command. Type 'help' for available commands.")
+                println("${Colors.RED}Unknown command: $input. Type '${Colors.YELLOW}help${Colors.RESET}' for available commands.${Colors.RESET}")
             }
+        }
+        
+        if (running) {
+            println("${Colors.DIM}${"─".repeat(30)}${Colors.RESET}")
         }
     }
 }
 
 private fun showHelp() {
-    println("Available commands:")
-    println("  echo <message>  - Echo the message back")
-    println("  help           - Show this help")
-    println("  quit/exit      - Exit the shell")
+    println("${Colors.BOLD}${Colors.CYAN}Available commands:${Colors.RESET}")
+    println("  ${Colors.YELLOW}echo${Colors.RESET} ${Colors.DIM}<message>${Colors.RESET}         - Echo the message back")
+    println("  ${Colors.YELLOW}users list${Colors.RESET}              - List all users")
+    println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}\"<search>\"${Colors.RESET}   - Search for users by name")
+    println("  ${Colors.YELLOW}help${Colors.RESET}                    - Show this help")
+    println("  ${Colors.YELLOW}quit/exit${Colors.RESET}               - Exit the shell")
 }
