@@ -2,6 +2,7 @@ package com.sonatype.darylhandley.fifteenfiveutils
 
 import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveService
+import com.sonatype.darylhandley.fifteenfiveutils.service.AliasService
 import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import com.sonatype.darylhandley.fifteenfiveutils.util.TableFormatter
 import org.jline.reader.LineReader
@@ -34,6 +35,7 @@ fun main() {
     
     val userService = UserService(sessionId)
     val objectiveService = ObjectiveService(sessionId)
+    val aliasService = AliasService()
     
     // Set up JLine3 terminal and line reader
     val terminal: Terminal = TerminalBuilder.builder()
@@ -49,7 +51,10 @@ fun main() {
         "users list",
         "objectives list",
         "objectives listbyuser",
-        "objectives get"
+        "objectives get",
+        "useralias create",
+        "useralias list",
+        "useralias remove"
     )
     
     val lineReader: LineReader = LineReaderBuilder.builder()
@@ -109,16 +114,22 @@ fun main() {
                     }
                 }
                 input.lowercase().startsWith("objectives listbyuser ") -> {
-                    val userIdStr = input.substring(22) // "objectives listbyuser ".length = 22
-                    try {
-                        val userId = userIdStr.toInt()
-                        val objectives = objectiveService.listObjectivesByUser(userId)
-                        println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
-                    } catch (e: NumberFormatException) {
-                        println("${Colors.RED}Invalid user ID: $userIdStr${Colors.RESET}")
-                    } catch (e: Exception) {
-                        println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
-                        e.printStackTrace()
+                    val userIdentifier = input.substring(22).trim() // "objectives listbyuser ".length = 22
+                    if (userIdentifier.isEmpty()) {
+                        println("${Colors.RED}Usage: objectives listbyuser <userid or alias>${Colors.RESET}")
+                    } else {
+                        try {
+                            val userId = aliasService.resolveUserIdentifier(userIdentifier)
+                            if (userId == null) {
+                                println("${Colors.RED}Unknown user identifier: $userIdentifier${Colors.RESET}")
+                            } else {
+                                val objectives = objectiveService.listObjectivesByUser(userId)
+                                println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
+                            }
+                        } catch (e: Exception) {
+                            println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
+                            e.printStackTrace()
+                        }
                     }
                 }
                 input.lowercase().startsWith("objectives get ") -> {
@@ -132,6 +143,45 @@ fun main() {
                     } catch (e: Exception) {
                         println("${Colors.RED}Error fetching objective: ${e.message}${Colors.RESET}")
                         e.printStackTrace()
+                    }
+                }
+                input.lowercase().startsWith("useralias create ") -> {
+                    val params = input.substring(17).trim() // "useralias create ".length = 17
+                    val parts = params.split(" ", limit = 2)
+                    if (parts.size != 2) {
+                        println("${Colors.RED}Usage: useralias create <alias> <userid>${Colors.RESET}")
+                    } else {
+                        try {
+                            val alias = parts[0]
+                            val userId = parts[1].toInt()
+                            val result = aliasService.createAlias(alias, userId)
+                            println("${Colors.GREEN}$result${Colors.RESET}")
+                        } catch (e: NumberFormatException) {
+                            println("${Colors.RED}Invalid user ID: ${parts[1]}${Colors.RESET}")
+                        } catch (e: Exception) {
+                            println("${Colors.RED}Error creating alias: ${e.message}${Colors.RESET}")
+                        }
+                    }
+                }
+                input.lowercase() == "useralias list" -> {
+                    try {
+                        val result = aliasService.listAliases()
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error listing aliases: ${e.message}${Colors.RESET}")
+                    }
+                }
+                input.lowercase().startsWith("useralias remove ") -> {
+                    val alias = input.substring(17).trim() // "useralias remove ".length = 17
+                    if (alias.isEmpty()) {
+                        println("${Colors.RED}Usage: useralias remove <alias>${Colors.RESET}")
+                    } else {
+                        try {
+                            val result = aliasService.removeAlias(alias)
+                            println("${Colors.GREEN}$result${Colors.RESET}")
+                        } catch (e: Exception) {
+                            println("${Colors.RED}Error removing alias: ${e.message}${Colors.RESET}")
+                        }
                     }
                 }
                 input.lowercase().startsWith("echo ") -> {
@@ -184,8 +234,13 @@ private fun showHelp() {
     println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
     println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")
     println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
-    println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID")
+    println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID or alias")
     println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
+    println()
+    println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
+    println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
+    println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
+    println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
     println()
     println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
     println("  ${Colors.YELLOW}help${Colors.RESET}                       - Show this help")
