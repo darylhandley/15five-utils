@@ -86,6 +86,15 @@ fun main() {
                         e.printStackTrace()
                     }
                 }
+                input.lowercase() == "objectives list" -> {
+                    try {
+                        val objectives = objectiveService.listObjectives(100)
+                        println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
+                        e.printStackTrace()
+                    }
+                }
                 input.lowercase().startsWith("objectives list ") -> {
                     val limitStr = input.substring(16) // "objectives list ".length = 16
                     try {
@@ -173,7 +182,8 @@ private fun showHelp() {
     println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
     println()
     println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
-    println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (limit number)")
+    println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")
+    println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
     println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID")
     println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
     println()

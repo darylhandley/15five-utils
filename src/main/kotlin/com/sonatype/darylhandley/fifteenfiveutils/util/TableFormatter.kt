@@ -58,6 +58,7 @@ object TableFormatter {
         result.append("👤 User: ${objective.user.name}\n")
         result.append("📅 Period: ${objective.getFormattedStartDate()} → ${objective.getFormattedEndDate()}\n")
         result.append("📊 Progress: ${objective.percentage}%\n")
+        result.append("🔗 Link: https://sonatype.15five.com/objectives/details/${objective.id}/\n")
         
         if (objective.tags.isNotEmpty()) {
             result.append("🏷️  Tags: ${objective.getTagNames()}\n")
