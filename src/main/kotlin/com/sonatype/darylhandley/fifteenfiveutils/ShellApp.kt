@@ -8,8 +8,10 @@ import com.sonatype.darylhandley.fifteenfiveutils.util.TableFormatter
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.completer.StringsCompleter
+import org.jline.reader.impl.history.DefaultHistory
 import org.jline.terminal.Terminal
 import org.jline.terminal.TerminalBuilder
+import java.io.File
 
 object Colors {
     const val RESET = "\u001B[0m"
@@ -42,6 +44,14 @@ fun main() {
         .system(true)
         .build()
         
+    // Set up command history file
+    val homeDir = System.getProperty("user.home")
+    val configDir = File(homeDir, ".15fiveutils")
+    if (!configDir.exists()) {
+        configDir.mkdirs()
+    }
+    val historyFile = File(configDir, "history")
+    
     // Set up tab completion for available commands
     val completer = StringsCompleter(
         "help",
@@ -60,6 +70,8 @@ fun main() {
     val lineReader: LineReader = LineReaderBuilder.builder()
         .terminal(terminal)
         .completer(completer)
+        .history(DefaultHistory())
+        .variable(LineReader.HISTORY_FILE, historyFile.absolutePath)
         .build()
     
     var running = true
@@ -247,8 +259,9 @@ private fun showHelp() {
     println("  ${Colors.YELLOW}quit/exit${Colors.RESET}                  - Exit the shell")
     println()
     println("${Colors.BOLD}${Colors.CYAN}Shell features:${Colors.RESET}")
-    println("  ${Colors.DIM}↑/↓ arrows${Colors.RESET}              - Navigate command history")
+    println("  ${Colors.DIM}↑/↓ arrows${Colors.RESET}              - Navigate command history (persisted)")
     println("  ${Colors.DIM}Tab${Colors.RESET}                     - Auto-complete commands")
     println("  ${Colors.DIM}←/→ arrows${Colors.RESET}              - Edit current line")
     println("  ${Colors.DIM}Ctrl+C${Colors.RESET}                  - Exit the shell")
+    println("  ${Colors.DIM}History stored${Colors.RESET}           - ~/.15fiveutils/history")
 }
