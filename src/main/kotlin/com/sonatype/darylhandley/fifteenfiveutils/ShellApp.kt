@@ -233,6 +233,9 @@ fun main() {
     }
     
     terminal.close()
+
+    // added for fast shutdown since okhttp client wants to hold onto connections
+    System.exit(0)
 }
 
 private fun showHelp() {
