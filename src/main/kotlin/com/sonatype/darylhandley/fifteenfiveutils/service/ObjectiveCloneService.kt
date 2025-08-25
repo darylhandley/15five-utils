@@ -117,10 +117,10 @@ class ObjectiveCloneService(private val sessionId: String) {
     
     private fun submitObjectiveForm(formData: FormBody): String {
         // Debug: Print form data being sent
-        println("Form data being sent:")
-        for (i in 0 until formData.size) {
-            println("  ${formData.name(i)}=${formData.value(i)}")
-        }
+//        println("Form data being sent:")
+//        for (i in 0 until formData.size) {
+//            println("  ${formData.name(i)}=${formData.value(i)}")
+//        }
 
         val ffCsrfToken = ConfigLoader.getCsrfToken()
         val xCSRFToken = ConfigLoader.getCsrfToken()
@@ -136,18 +136,18 @@ class ObjectiveCloneService(private val sessionId: String) {
 
         val response = httpClient.newCall(request).execute()
 
-        println(
-          "Response: ${response.code} ${response.message}\n" +
-          "Headers: ${response.headers}\n"
-        )
+//        println(
+//          "Response: ${response.code} ${response.message}\n" +
+//          "Headers: ${response.headers}\n"
+//        )
 
         val body = response.body?.string()
 
         // Write response body to file at project root for debugging
         // you can see form errors by opening the file in a browser
-        if (body != null) {
-          File("create_response.html").writeText(body)
-        }
+//        if (body != null) {
+//          File("create_response.html").writeText(body)
+//        }
 
 
 
@@ -156,7 +156,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         }
 
         val url = response.request.url.toString()
-        println("Response URL: $url")
+//        println("Response URL: $url")
         
         return url
     }
