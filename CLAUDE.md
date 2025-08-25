@@ -31,16 +31,25 @@ src/main/kotlin/com/sonatype/darylhandley/fifteenfiveutils/
 
 ## Configuration System
 - **Properties Files**:
-  - `application.properties` (gitignored) - Contains actual session ID
-  - `sample.properties` (committed) - Template configuration file
+  - `application.properties` (gitignored) - Contains actual session ID and CSRF token
+  - `application.properties.sample` (committed) - Template configuration file
 - **Configuration Fields**:
   - `fifteen.five.session.id` - 15Five session cookie for API authentication
+  - `fifteen.five.csrf.token` - CSRF token for objective creation/cloning
 
 ## Available Commands
 - `help` - Show available commands and shell features
 - `echo <message>` - Echo message back to console
 - `users list` - List all users from 15Five API
 - `users list <search>` - Search users by name or title (no quotes needed)
+- `objectives list` - List top 100 objectives
+- `objectives list <limit>` - List objectives with custom limit
+- `objectives listbyuser <id>` - List objectives for user ID or alias
+- `objectives get <id>` - Get single objective by ID
+- `objectives clone <id> <user>` - Clone objective to another user
+- `useralias create <alias> <userid>` - Create user alias
+- `useralias list` - List all user aliases
+- `useralias remove <alias>` - Remove user alias
 - `quit` / `exit` - Exit the shell
 
 ## Shell Features (via JLine3)

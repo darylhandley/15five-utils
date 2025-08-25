@@ -2,6 +2,7 @@ package com.sonatype.darylhandley.fifteenfiveutils
 
 import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveService
+import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveCloneService
 import com.sonatype.darylhandley.fifteenfiveutils.service.AliasService
 import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import com.sonatype.darylhandley.fifteenfiveutils.util.TableFormatter
@@ -37,6 +38,7 @@ fun main() {
     
     val userService = UserService(sessionId)
     val objectiveService = ObjectiveService(sessionId)
+    val objectiveCloneService = ObjectiveCloneService(sessionId)
     val aliasService = AliasService()
     
     // Set up JLine3 terminal and line reader
@@ -62,6 +64,7 @@ fun main() {
         "objectives list",
         "objectives listbyuser",
         "objectives get",
+        "objectives clone",
         "useralias create",
         "useralias list",
         "useralias remove"
@@ -155,6 +158,51 @@ fun main() {
                     } catch (e: Exception) {
                         println("${Colors.RED}Error fetching objective: ${e.message}${Colors.RESET}")
                         e.printStackTrace()
+                    }
+                }
+                input.lowercase().startsWith("objectives clone ") -> {
+                    val params = input.substring(17).trim() // "objectives clone ".length = 17
+                    val parts = params.split(" ", limit = 2)
+                    if (parts.size != 2) {
+                        println("${Colors.RED}Usage: objectives clone <objective_id> <target_user_id_or_alias>${Colors.RESET}")
+                    } else {
+                        try {
+                            val objectiveId = parts[0].toInt()
+                            val targetUserIdentifier = parts[1]
+                            
+                            // Resolve target user
+                            val targetUserId = aliasService.resolveUserIdentifier(targetUserIdentifier)
+                            if (targetUserId == null) {
+                                println("${Colors.RED}Unknown user identifier: $targetUserIdentifier${Colors.RESET}")
+                                continue
+                            }
+                            
+                            // Get source objective
+                            val sourceObjective = objectiveService.getObjective(objectiveId)
+                            
+                            // Get target user name for display
+                            val targetUserName = userService.listAllUsers()
+                                .find { it.id == targetUserId }?.fullName ?: "User ID $targetUserId"
+                            
+                            // Show preview and get confirmation
+                            val preview = objectiveCloneService.buildClonePreview(sourceObjective, targetUserName, targetUserId)
+                            print("${Colors.CYAN}$preview${Colors.RESET}")
+                            
+                            val confirmation = lineReader.readLine()
+                            if (confirmation.lowercase() == "y" || confirmation.lowercase() == "yes") {
+                                println("${Colors.YELLOW}Cloning objective...${Colors.RESET}")
+                                val result = objectiveCloneService.cloneObjective(sourceObjective, targetUserId)
+                                println("${Colors.GREEN}$result${Colors.RESET}")
+                            } else {
+                                println("${Colors.YELLOW}Clone cancelled.${Colors.RESET}")
+                            }
+                            
+                        } catch (e: NumberFormatException) {
+                            println("${Colors.RED}Invalid objective ID: ${parts[0]}${Colors.RESET}")
+                        } catch (e: Exception) {
+                            println("${Colors.RED}Error cloning objective: ${e.message}${Colors.RESET}")
+                            e.printStackTrace()
+                        }
                     }
                 }
                 input.lowercase().startsWith("useralias create ") -> {
@@ -251,6 +299,7 @@ private fun showHelp() {
     println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
     println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID or alias")
     println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
+    println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET} - Clone objective to another user")
     println()
     println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
     println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
