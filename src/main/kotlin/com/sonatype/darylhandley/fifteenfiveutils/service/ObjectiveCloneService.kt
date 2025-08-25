@@ -1,10 +1,12 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
+
 import com.sonatype.darylhandley.fifteenfiveutils.model.Objective
 import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import okhttp3.FormBody
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -62,7 +64,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         
         // Objective fields
         formBuilder.add("description", sourceObjective.description)
-//        formBuilder.add("long_description", sourceObjective) // No long description available from API
+        formBuilder.add("long_description", "") // No long description available from API
         formBuilder.add("user", targetUserId.toString())
         
         // Scope settings (copy from source or use defaults)
@@ -70,8 +72,10 @@ class ObjectiveCloneService(private val sessionId: String) {
         formBuilder.add("scope", "company-wide")
         formBuilder.add("group_type", "")
         formBuilder.add("group", "")
-//        formBuilder.add("parent", sourceObjective.id.toString())
-        formBuilder.add("is_progress_aligned", "")
+        formBuilder.add("parent", sourceObjective.id.toString())
+        formBuilder.add("is_progress_aligned", "0")
+
+//        formBuilder.add("is_progress_aligned", "")
         
         // Period settings
         formBuilder.add("period", "custom")
@@ -137,9 +141,15 @@ class ObjectiveCloneService(private val sessionId: String) {
           "Headers: ${response.headers}\n"
         )
 
-        println("---------------------------------------------------------------------------")
-        println(response.body?.string())
-        println("---------------------------------------------------------------------------")
+        val body = response.body?.string()
+
+        // Write response body to file at project root for debugging
+        // you can see form errors by opening the file in a browser
+        if (body != null) {
+          File("create_response.html").writeText(body)
+        }
+
+
 
         if (!response.isSuccessful) {
             throw RuntimeException("Failed to create objective: ${response.code} ${response.body?.string()}")
