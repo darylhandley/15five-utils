@@ -12,9 +12,10 @@ class ObjectiveCloneService(private val sessionId: String) {
     
     private val httpClient = OkHttpClient()
     
-    fun cloneObjective(sourceObjective: Objective, targetUserId: Int) {
+    fun cloneObjective(sourceObjective: Objective, targetUserId: Int): Int {
         val formData = buildFormData(sourceObjective, targetUserId)
-        submitObjectiveForm(formData)
+        val responseUrl = submitObjectiveForm(formData)
+        return parseObjectiveIdFromUrl(responseUrl)
     }
     
     fun buildClonePreview(sourceObjective: Objective, targetUserName: String, targetUserId: Int): String {
@@ -69,7 +70,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         formBuilder.add("scope", "company-wide")
         formBuilder.add("group_type", "")
         formBuilder.add("group", "")
-        formBuilder.add("parent", sourceObjective.id.toString())
+//        formBuilder.add("parent", sourceObjective.id.toString())
         formBuilder.add("is_progress_aligned", "")
         
         // Period settings
@@ -79,6 +80,11 @@ class ObjectiveCloneService(private val sessionId: String) {
         
         // Visibility
         formBuilder.add("visibility", "public")
+        
+        // Tags
+        sourceObjective.tags.forEach { tag ->
+            formBuilder.add("tags", tag.id.toString())
+        }
         
         // Key results
         sourceObjective.keyResults.forEachIndexed { index, keyResult ->
@@ -105,7 +111,7 @@ class ObjectiveCloneService(private val sessionId: String) {
 
     }
     
-    private fun submitObjectiveForm(formData: FormBody)  {
+    private fun submitObjectiveForm(formData: FormBody): String {
         // Debug: Print form data being sent
         println("Form data being sent:")
         for (i in 0 until formData.size) {
@@ -141,21 +147,20 @@ class ObjectiveCloneService(private val sessionId: String) {
 
         val url = response.request.url.toString()
         println("Response URL: $url")
+        
+        return url
     }
     
-//    private fun parseCreatedObjectiveId(responseHtml: String): String {
-//        // Look for redirect or success indicators in the HTML response
-//        // This might be a redirect to the new objective's detail page
-//        // Format: /objectives/details/12345678/
-//        val objectiveIdRegex = Regex("/objectives/details/(\\d+)/")
-//        val match = objectiveIdRegex.find(responseHtml)
-//
-//        return if (match != null) {
-//            val objectiveId = match.groupValues[1]
-//            "Successfully cloned objective! New objective ID: $objectiveId\n" +
-//            "🔗 Link: https://sonatype.15five.com/objectives/details/$objectiveId/"
-//        } else {
-//            "Objective created successfully, but could not extract new objective ID from response."
-//        }
-//    }
+    private fun parseObjectiveIdFromUrl(url: String): Int {
+        // URL format: https://sonatype.15five.com/objectives/details/12885743/
+        val objectiveIdRegex = Regex("/objectives/details/(\\d+)/")
+        val match = objectiveIdRegex.find(url)
+        
+        return if (match != null) {
+            match.groupValues[1].toInt()
+        } else {
+            throw RuntimeException("Could not parse objective ID from URL: $url")
+        }
+    }
+
 }

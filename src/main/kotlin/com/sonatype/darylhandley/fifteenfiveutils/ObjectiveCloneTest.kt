@@ -8,7 +8,7 @@ import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 
 object ObjectiveCloneTest {
     
-    private const val TEST_OBJECTIVE_ID = 12872510
+    private const val TEST_OBJECTIVE_ID = 12872507
     private const val TARGET_USER_ALIAS = "daryl"
     
     @JvmStatic

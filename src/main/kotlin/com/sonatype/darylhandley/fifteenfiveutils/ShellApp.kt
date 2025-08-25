@@ -191,7 +191,12 @@ fun main() {
                             val confirmation = lineReader.readLine()
                             if (confirmation.lowercase() == "y" || confirmation.lowercase() == "yes") {
                                 println("${Colors.YELLOW}Cloning objective...${Colors.RESET}")
-                                objectiveCloneService.cloneObjective(sourceObjective, targetUserId)
+                                val clonedObjectiveId = objectiveCloneService.cloneObjective(sourceObjective, targetUserId)
+                                println("${Colors.GREEN}✅ Objective cloned successfully!${Colors.RESET}")
+                                
+                                // Fetch and display the cloned objective
+                                val clonedObjective = objectiveService.getObjective(clonedObjectiveId)
+                                println("${Colors.GREEN}${TableFormatter.formatSingleObjective(clonedObjective)}${Colors.RESET}")
                             } else {
                                 println("${Colors.YELLOW}Clone cancelled.${Colors.RESET}")
                             }
