@@ -2,7 +2,8 @@ package com.sonatype.darylhandley.fifteenfiveutils.model
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.fasterxml.jackson.annotation.JsonProperty
-import java.time.LocalDateTime
+import java.time.ZonedDateTime
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -45,7 +46,8 @@ data class Objective(
 ) {
     fun getFormattedStartDate(): String {
         return try {
-            LocalDateTime.parse(startTs, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            ZonedDateTime.parse(startTs, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .withZoneSameInstant(ZoneOffset.UTC)
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         } catch (e: Exception) {
             startTs.substring(0, 10) // fallback to first 10 chars
@@ -54,7 +56,8 @@ data class Objective(
     
     fun getFormattedEndDate(): String {
         return try {
-            LocalDateTime.parse(endTs, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+            ZonedDateTime.parse(endTs, DateTimeFormatter.ISO_OFFSET_DATE_TIME)
+                .withZoneSameInstant(ZoneOffset.UTC)
                 .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
         } catch (e: Exception) {
             endTs.substring(0, 10) // fallback to first 10 chars
