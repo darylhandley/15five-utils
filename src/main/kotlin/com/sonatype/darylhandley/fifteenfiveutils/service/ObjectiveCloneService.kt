@@ -12,9 +12,9 @@ class ObjectiveCloneService(private val sessionId: String) {
     
     private val httpClient = OkHttpClient()
     
-    fun cloneObjective(sourceObjective: Objective, targetUserId: Int): String {
+    fun cloneObjective(sourceObjective: Objective, targetUserId: Int) {
         val formData = buildFormData(sourceObjective, targetUserId)
-        return submitObjectiveForm(formData)
+        submitObjectiveForm(formData)
     }
     
     fun buildClonePreview(sourceObjective: Objective, targetUserName: String, targetUserId: Int): String {
@@ -61,7 +61,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         
         // Objective fields
         formBuilder.add("description", sourceObjective.description)
-        formBuilder.add("long_description", "") // No long description available from API
+//        formBuilder.add("long_description", sourceObjective) // No long description available from API
         formBuilder.add("user", targetUserId.toString())
         
         // Scope settings (copy from source or use defaults)
@@ -69,7 +69,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         formBuilder.add("scope", "company-wide")
         formBuilder.add("group_type", "")
         formBuilder.add("group", "")
-        formBuilder.add("parent", "") // No parent for cloned objectives
+        formBuilder.add("parent", sourceObjective.id.toString())
         formBuilder.add("is_progress_aligned", "")
         
         // Period settings
@@ -87,7 +87,7 @@ class ObjectiveCloneService(private val sessionId: String) {
             formBuilder.add("key-result-$index-integration_link", "")
             formBuilder.add("key-result-$index-sort_order", keyResult.sortOrder.toString())
             formBuilder.add("key-result-$index-type", keyResult.type)
-            formBuilder.add("key-result-$index-currency", keyResult.symbol ?: "")
+            formBuilder.add("key-result-$index-currency", "")
             formBuilder.add("key-result-$index-start_value", keyResult.startValue)
             formBuilder.add("key-result-$index-target_value", keyResult.targetValue)
             formBuilder.add("key-result-$index-owner", targetUserId.toString())
@@ -97,76 +97,65 @@ class ObjectiveCloneService(private val sessionId: String) {
     }
     
     private fun formatDateForForm(dateString: String): String {
-        try {
-            // Parse the ISO date from the API (e.g., "2025-07-01")
-            val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-            val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
-            val date = inputFormat.parse(dateString)
-            return outputFormat.format(date ?: Date())
-        } catch (e: Exception) {
-            // Fallback to original string if parsing fails
-            return dateString
-        }
+      // Parse the ISO date from the API (e.g., "2025-07-01")
+      val inputFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+      val outputFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
+      val date = inputFormat.parse(dateString)
+      return outputFormat.format(date ?: Date())
+
     }
     
-    private fun submitObjectiveForm(formData: FormBody): String {
+    private fun submitObjectiveForm(formData: FormBody)  {
         // Debug: Print form data being sent
         println("Form data being sent:")
         for (i in 0 until formData.size) {
             println("  ${formData.name(i)}=${formData.value(i)}")
         }
-        
+
+        val ffCsrfToken = ConfigLoader.getCsrfToken()
+        val xCSRFToken = ConfigLoader.getCsrfToken()
+
         val request = Request.Builder()
-            .url("https://sonatype.15five.com/objectives/create/")
-            .post(formData)
-            .addHeader("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:137.0) Gecko/20100101 Firefox/137.0")
-            .addHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
-            .addHeader("Accept-Language", "en-US,en;q=0.5")
-            .addHeader("Accept-Encoding", "gzip, deflate, br, zstd")
-            .addHeader("Cookie", "sessionid=$sessionId")
-            .addHeader("Content-Type", "application/x-www-form-urlencoded")
-            .addHeader("Origin", "https://sonatype.15five.com")
-            .addHeader("Alt-Used", "sonatype.15five.com")
-            .addHeader("Connection", "keep-alive")
-            .addHeader("Referer", "https://sonatype.15five.com/objectives/create/")
-            .addHeader("Upgrade-Insecure-Requests", "1")
-            .addHeader("Sec-Fetch-Dest", "document")
-            .addHeader("Sec-Fetch-Mode", "navigate")
-            .addHeader("Sec-Fetch-Site", "same-origin")
-            .addHeader("Sec-Fetch-User", "?1")
-            .addHeader("Priority", "u=0, i")
-            .addHeader("TE", "trailers")
-            .build()
-        
+          .url("https://sonatype.15five.com/objectives/create/")
+          .post(formData)
+          .header("Origin", "https://sonatype.15five.com")
+          .header("Referer", "https://sonatype.15five.com/objectives/create/")
+          .header("X-CSRFToken", "${xCSRFToken}")
+          .header("Cookie", "ff_csrf_token=${ffCsrfToken}; sessionid=${sessionId};")
+          .build()
+
         val response = httpClient.newCall(request).execute()
-        
-        response.use {
-            return if (response.isSuccessful) {
-                val responseBody = response.body?.string() ?: ""
-                parseCreatedObjectiveId(responseBody)
-            } else {
-                val errorBody = response.body?.string() ?: ""
-                println("HTTP ${response.code}: ${response.message}")
-                println("Response body: ${errorBody.take(500)}") // First 500 chars for debugging
-                
-                throw RuntimeException("Failed to create objective: ${response.code} ${response.message}")
-            }
+
+        println(
+          "Response: ${response.code} ${response.message}\n" +
+          "Headers: ${response.headers}\n"
+        )
+
+        println("---------------------------------------------------------------------------")
+        println(response.body?.string())
+        println("---------------------------------------------------------------------------")
+
+        if (!response.isSuccessful) {
+            throw RuntimeException("Failed to create objective: ${response.code} ${response.body?.string()}")
         }
+
+        val url = response.request.url.toString()
+        println("Response URL: $url")
     }
     
-    private fun parseCreatedObjectiveId(responseHtml: String): String {
-        // Look for redirect or success indicators in the HTML response
-        // This might be a redirect to the new objective's detail page
-        // Format: /objectives/details/12345678/
-        val objectiveIdRegex = Regex("/objectives/details/(\\d+)/")
-        val match = objectiveIdRegex.find(responseHtml)
-        
-        return if (match != null) {
-            val objectiveId = match.groupValues[1]
-            "Successfully cloned objective! New objective ID: $objectiveId\n" +
-            "🔗 Link: https://sonatype.15five.com/objectives/details/$objectiveId/"
-        } else {
-            "Objective created successfully, but could not extract new objective ID from response."
-        }
-    }
+//    private fun parseCreatedObjectiveId(responseHtml: String): String {
+//        // Look for redirect or success indicators in the HTML response
+//        // This might be a redirect to the new objective's detail page
+//        // Format: /objectives/details/12345678/
+//        val objectiveIdRegex = Regex("/objectives/details/(\\d+)/")
+//        val match = objectiveIdRegex.find(responseHtml)
+//
+//        return if (match != null) {
+//            val objectiveId = match.groupValues[1]
+//            "Successfully cloned objective! New objective ID: $objectiveId\n" +
+//            "🔗 Link: https://sonatype.15five.com/objectives/details/$objectiveId/"
+//        } else {
+//            "Objective created successfully, but could not extract new objective ID from response."
+//        }
+//    }
 }

@@ -102,7 +102,14 @@ mvn compile exec:java
 
 ## Development Notes
 - **Session ID**: Obtain from browser cookies after logging into 15Five
+- **CSRF Token**: Obtain from objectives create form for cloning functionality
 - **Error Handling**: Currently crashes on errors (by design for simplicity)
+
+## Testing & Debugging
+- **ObjectiveCloneTest**: Standalone test for troubleshooting objective cloning
+  - Tests cloning objective 12872510 to user alias "daryl"
+  - Provides detailed debugging output
+  - Run with: `mvn exec:java@test-clone`
 - **Search**: Filters by user's `fullName` and `title` fields
 - **Table Output**: Shows User ID, Full Name, Title, and Active status
 - **Command Parsing**: Simple string-based matching with `when` expressions

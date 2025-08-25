@@ -30,4 +30,9 @@ object ConfigLoader {
         return properties.getProperty("fifteen.five.csrf.token")
             ?: throw RuntimeException("fifteen.five.csrf.token not found in application.properties")
     }
+
+  fun getFFCsrfToken(): String {
+    return properties.getProperty("fifteen.ff_csrf_token")
+      ?: throw RuntimeException("fifteen.ff_csrf_token not found in application.properties")
+  }
 }

@@ -41,6 +41,13 @@
             <version>13.1</version>
         </dependency>
         
+        <!-- OkHttp for standalone HTTP calls -->
+        <dependency>
+            <groupId>com.squareup.okhttp3</groupId>
+            <artifactId>okhttp</artifactId>
+            <version>4.12.0</version>
+        </dependency>
+        
         <!-- Jackson JSON Processing -->
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -105,6 +112,20 @@
                 <configuration>
                     <mainClass>com.sonatype.darylhandley.fifteenfiveutils.ShellAppKt</mainClass>
                 </configuration>
+                <executions>
+                    <execution>
+                        <id>test-clone</id>
+                        <configuration>
+                            <mainClass>com.sonatype.darylhandley.fifteenfiveutils.ObjectiveCloneTest</mainClass>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>create-objective</id>
+                        <configuration>
+                            <mainClass>CreateObjectiveKt</mainClass>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
