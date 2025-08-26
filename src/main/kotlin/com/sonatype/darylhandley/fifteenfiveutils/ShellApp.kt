@@ -26,7 +26,7 @@ object Colors {
 }
 
 fun main() {
-    println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' for commands or '${Colors.YELLOW}quit${Colors.RESET}' to exit")
+    println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}q${Colors.RESET}' to exit")
     println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
     
     val sessionId = try {
@@ -39,7 +39,7 @@ fun main() {
     val userService = UserService(sessionId)
     val objectiveService = ObjectiveService(sessionId)
     val objectiveCloneService = ObjectiveCloneService(sessionId)
-    val aliasService = AliasService()
+    val aliasService = AliasService(userService)
     
     // Set up JLine3 terminal and line reader
     val terminal: Terminal = TerminalBuilder.builder()
@@ -57,9 +57,9 @@ fun main() {
     // Set up tab completion for available commands
     val completer = StringsCompleter(
         "help",
-        "quit", 
-        "exit",
-        "echo",
+        "?",
+        "quit",
+        "q",
         "users list",
         "objectives list",
         "objectives listbyuser",
@@ -248,22 +248,15 @@ fun main() {
                         }
                     }
                 }
-                input.lowercase().startsWith("echo ") -> {
-                    val message = input.substring(5)
-                    println("${Colors.GREEN}$message${Colors.RESET}")
-                }
-                input.lowercase() == "echo" -> {
-                    println("${Colors.RED}echo: missing argument${Colors.RESET}")
-                }
-                input.lowercase() == "quit" || input.lowercase() == "exit" -> {
+                input.lowercase() == "quit" || input.lowercase() == "q" -> {
                     println("${Colors.YELLOW}Goodbye!${Colors.RESET}")
                     running = false
                 }
-                input.lowercase() == "help" -> {
+                input.lowercase() == "help" || input == "?" -> {
                     showHelp()
                 }
                 else -> {
-                    println("${Colors.RED}Unknown command: $input. Type '${Colors.YELLOW}help${Colors.RESET}' for available commands.${Colors.RESET}")
+                    println("${Colors.RED}Unknown command: $input. Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for available commands.${Colors.RESET}")
                 }
             }
             
@@ -291,9 +284,9 @@ fun main() {
 }
 
 private fun showHelp() {
-    println("${Colors.BOLD}${Colors.CYAN}Available commands:${Colors.RESET}")
-    println("  ${Colors.YELLOW}echo${Colors.RESET} ${Colors.DIM}<message>${Colors.RESET}            - Echo the message back")
-    println()
+    println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
+    println("  ${Colors.YELLOW}help/?${Colors.RESET}                     - Show this help")
+    println("  ${Colors.YELLOW}quit/q${Colors.RESET}                    - Exit the shell")
     println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
     println("  ${Colors.YELLOW}users list${Colors.RESET}                 - List all users")
     println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
@@ -310,14 +303,4 @@ private fun showHelp() {
     println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
     println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
     println()
-    println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
-    println("  ${Colors.YELLOW}help${Colors.RESET}                       - Show this help")
-    println("  ${Colors.YELLOW}quit/exit${Colors.RESET}                  - Exit the shell")
-    println()
-    println("${Colors.BOLD}${Colors.CYAN}Shell features:${Colors.RESET}")
-    println("  ${Colors.DIM}↑/↓ arrows${Colors.RESET}              - Navigate command history (persisted)")
-    println("  ${Colors.DIM}Tab${Colors.RESET}                     - Auto-complete commands")
-    println("  ${Colors.DIM}←/→ arrows${Colors.RESET}              - Edit current line")
-    println("  ${Colors.DIM}Ctrl+C${Colors.RESET}                  - Exit the shell")
-    println("  ${Colors.DIM}History stored${Colors.RESET}           - ~/.15fiveutils/history")
 }

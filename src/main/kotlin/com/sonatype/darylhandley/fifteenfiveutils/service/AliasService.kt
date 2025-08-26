@@ -1,11 +1,12 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
+import de.vandermeer.asciitable.AsciiTable
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.*
 
-class AliasService {
+class AliasService(private val userService: UserService? = null) {
     
     private val aliasFile: File
     
@@ -81,15 +82,40 @@ class AliasService {
             return "No aliases found."
         }
         
-        val result = StringBuilder()
-        result.append("User aliases:\n")
+        return if (userService != null) {
+            formatAliasesTable(properties)
+        } else {
+            // Fallback to simple format if no UserService available
+            val result = StringBuilder()
+            result.append("User aliases:\n")
+            
+            properties.keys.map { it.toString() }.sorted().forEach { alias ->
+                val userId = properties.getProperty(alias)
+                result.append("  $alias → $userId\n")
+            }
+            
+            result.toString().trimEnd()
+        }
+    }
+    
+    private fun formatAliasesTable(properties: Properties): String {
+        val table = AsciiTable()
+        table.addRule()
+        table.addRow("Alias", "User ID", "Username")
+        table.addRule()
+        
+        val users = userService?.listAllUsers() ?: emptyList()
+        val userMap = users.associateBy { it.id }
         
         properties.keys.map { it.toString() }.sorted().forEach { alias ->
-            val userId = properties.getProperty(alias)
-            result.append("  $alias → $userId\n")
+            val userId = properties.getProperty(alias)?.toIntOrNull() ?: 0
+            val username = userMap[userId]?.fullName ?: "Unknown User"
+            
+            table.addRow(alias, userId.toString(), username)
         }
         
-        return result.toString().trimEnd()
+        table.addRule()
+        return table.render()
     }
     
     fun resolveUserIdentifier(input: String): Int? {

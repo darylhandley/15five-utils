@@ -29,7 +29,7 @@ object ObjectiveCloneTest {
             val userService = UserService(sessionId)
             val objectiveService = ObjectiveService(sessionId)
             val objectiveCloneService = ObjectiveCloneService(sessionId)
-            val aliasService = AliasService()
+            val aliasService = AliasService(userService)
             println("✅ Services initialized")
             
             // Resolve target user alias
