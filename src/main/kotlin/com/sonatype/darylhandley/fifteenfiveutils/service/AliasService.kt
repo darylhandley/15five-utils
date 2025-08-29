@@ -6,7 +6,7 @@ import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.util.Properties
 
-class AliasService(private val userService: UserService? = null) {
+class AliasService(private val userService: UserService? = null, private var teamsService: TeamsService? = null) {
 
     private val aliasFile: File
 
@@ -60,12 +60,24 @@ class AliasService(private val userService: UserService? = null) {
         return "Alias '$alias' created for user ID $userId."
     }
 
+    fun setTeamsService(teamsService: TeamsService) {
+        this.teamsService = teamsService
+    }
+
     fun removeAlias(alias: String): String {
         val properties = loadAliases()
         val lowerAlias = alias.lowercase()
 
         if (!properties.containsKey(lowerAlias)) {
             return "Alias '$alias' not found."
+        }
+
+        // Check if alias is used in any team
+        teamsService?.let { teams ->
+            if (teams.isAliasInAnyTeam(alias)) {
+                val teamsUsingAlias = teams.getTeamsContainingAlias(alias)
+                return "Cannot remove alias '$alias' - it is used in the following team(s): ${teamsUsingAlias.joinToString(", ")}. Remove it from teams first."
+            }
         }
 
         val userId = properties.getProperty(lowerAlias)

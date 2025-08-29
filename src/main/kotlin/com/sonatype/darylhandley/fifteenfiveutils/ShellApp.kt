@@ -3,6 +3,7 @@ package com.sonatype.darylhandley.fifteenfiveutils
 import com.sonatype.darylhandley.fifteenfiveutils.service.AliasService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveCloneService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveService
+import com.sonatype.darylhandley.fifteenfiveutils.service.TeamsService
 import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
 import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import com.sonatype.darylhandley.fifteenfiveutils.util.TableFormatter
@@ -30,6 +31,7 @@ class ShellApp {
     private lateinit var objectiveService: ObjectiveService
     private lateinit var objectiveCloneService: ObjectiveCloneService
     private lateinit var aliasService: AliasService
+    private lateinit var teamsService: TeamsService
     private lateinit var lineReader: LineReader
     private lateinit var terminal: Terminal
     private fun tokenizeInput(input: String): List<String> {
@@ -51,6 +53,10 @@ class ShellApp {
         objectiveService = ObjectiveService(sessionId)
         objectiveCloneService = ObjectiveCloneService(sessionId)
         aliasService = AliasService(userService)
+        teamsService = TeamsService(userService, aliasService)
+        
+        // Set up circular reference for alias protection
+        aliasService.setTeamsService(teamsService)
 
         // Set up JLine3 terminal and line reader
         terminal = TerminalBuilder.builder()
@@ -79,7 +85,13 @@ class ShellApp {
             "objectives clone",
             "useralias create",
             "useralias list",
-            "useralias remove"
+            "useralias remove",
+            "teams create",
+            "teams get",
+            "teams add",
+            "teams remove",
+            "teams delete",
+            "teams list"
         )
 
         lineReader = LineReaderBuilder.builder()
@@ -103,6 +115,7 @@ class ShellApp {
                     "users" -> handleUsersCommand(tokens)
                     "objectives" -> handleObjectivesCommand(tokens)
                     "useralias" -> handleUserAliasCommand(tokens)
+                    "teams" -> handleTeamsCommand(tokens)
                     "help", "?" -> handleHelpCommand()
                     "quit", "exit", "q" -> {
                         println("${Colors.YELLOW}Goodbye!${Colors.RESET}")
@@ -364,6 +377,98 @@ class ShellApp {
         }
     }
 
+    private fun handleTeamsCommand(tokens: List<String>) {
+        if (tokens.size < 2) {
+            println("${Colors.RED}Usage: teams <create|get|add|remove|delete|list> [args...]${Colors.RESET}")
+            return
+        }
+
+        when (tokens[1].lowercase()) {
+            "create" -> {
+                if (tokens.size != 3) {
+                    println("${Colors.RED}Usage: teams create <team_name>${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.createTeam(tokens[2])
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error creating team: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            "get" -> {
+                if (tokens.size != 3) {
+                    println("${Colors.RED}Usage: teams get <team_name>${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.getTeam(tokens[2])
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error getting team: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            "add" -> {
+                if (tokens.size != 4) {
+                    println("${Colors.RED}Usage: teams add <team_name> <alias>${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.addMemberToTeam(tokens[2], tokens[3])
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error adding member to team: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            "remove" -> {
+                if (tokens.size != 4) {
+                    println("${Colors.RED}Usage: teams remove <team_name> <alias>${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.removeMemberFromTeam(tokens[2], tokens[3])
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error removing member from team: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            "list" -> {
+                if (tokens.size != 2) {
+                    println("${Colors.RED}Usage: teams list${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.listTeams()
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error listing teams: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            "delete" -> {
+                if (tokens.size != 3) {
+                    println("${Colors.RED}Usage: teams delete <team_name>${Colors.RESET}")
+                } else {
+                    try {
+                        val result = teamsService.deleteTeam(tokens[2])
+                        println("${Colors.GREEN}$result${Colors.RESET}")
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error deleting team: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
+            else -> {
+                println("${Colors.RED}Unknown teams subcommand: ${tokens[1]}${Colors.RESET}")
+                println("${Colors.RED}Usage: teams <create|get|add|remove|delete|list> [args...]${Colors.RESET}")
+            }
+        }
+    }
+
     private fun handleHelpCommand() {
         println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
         println("  ${Colors.YELLOW}help/?${Colors.RESET}                     - Show this help")
@@ -383,6 +488,14 @@ class ShellApp {
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
         println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
         println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
+        println()
+        println("${Colors.BOLD}${Colors.CYAN}Teams:${Colors.RESET}")
+        println("  ${Colors.YELLOW}teams create${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}          - Create a new team")
+        println("  ${Colors.YELLOW}teams get${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}             - Show team members with details")
+        println("  ${Colors.YELLOW}teams add${Colors.RESET} ${Colors.DIM}<team> <alias>${Colors.RESET}     - Add alias to team")
+        println("  ${Colors.YELLOW}teams remove${Colors.RESET} ${Colors.DIM}<team> <alias>${Colors.RESET}  - Remove alias from team")
+        println("  ${Colors.YELLOW}teams delete${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}          - Delete team (keeps aliases)")
+        println("  ${Colors.YELLOW}teams list${Colors.RESET}                  - List all teams")
         println()
     }
 }
