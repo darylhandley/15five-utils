@@ -37,49 +37,49 @@ class ShellApp {
     }
 
     fun run() {
-    println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}q${Colors.RESET}' to exit")
-    println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
+        println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}q${Colors.RESET}' to exit")
+        println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
 
-    val sessionId = try {
-        ConfigLoader.getSessionId()
-    } catch (e: Exception) {
-        println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
-        return
-    }
+        val sessionId = try {
+            ConfigLoader.getSessionId()
+        } catch (e: Exception) {
+            println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
+            return
+        }
 
         userService = UserService(sessionId)
         objectiveService = ObjectiveService(sessionId)
         objectiveCloneService = ObjectiveCloneService(sessionId)
         aliasService = AliasService(userService)
 
-    // Set up JLine3 terminal and line reader
+        // Set up JLine3 terminal and line reader
         terminal = TerminalBuilder.builder()
             .system(true)
             .build()
 
-    // Set up command history file
-    val homeDir = System.getProperty("user.home")
-    val configDir = File(homeDir, ".15fiveutils")
-    if (!configDir.exists()) {
-        configDir.mkdirs()
-    }
-    val historyFile = File(configDir, "history")
+        // Set up command history file
+        val homeDir = System.getProperty("user.home")
+        val configDir = File(homeDir, ".15fiveutils")
+        if (!configDir.exists()) {
+            configDir.mkdirs()
+        }
+        val historyFile = File(configDir, "history")
 
-    // Set up tab completion for available commands
-    val completer = StringsCompleter(
-        "help",
-        "?",
-        "quit",
-        "q",
-        "users list",
-        "objectives list",
-        "objectives listbyuser",
-        "objectives get",
-        "objectives clone",
-        "useralias create",
-        "useralias list",
-        "useralias remove"
-    )
+        // Set up tab completion for available commands
+        val completer = StringsCompleter(
+            "help",
+            "?",
+            "quit",
+            "q",
+            "users list",
+            "objectives list",
+            "objectives listbyuser",
+            "objectives get",
+            "objectives clone",
+            "useralias create",
+            "useralias list",
+            "useralias remove"
+        )
 
         lineReader = LineReaderBuilder.builder()
             .terminal(terminal)
@@ -88,7 +88,7 @@ class ShellApp {
             .variable(LineReader.HISTORY_FILE, historyFile.absolutePath)
             .build()
 
-    var running = true
+        var running = true
 
         while (running) {
             try {
@@ -364,25 +364,25 @@ class ShellApp {
     }
 
     private fun handleHelpCommand() {
-    println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
-    println("  ${Colors.YELLOW}help/?${Colors.RESET}                     - Show this help")
-    println("  ${Colors.YELLOW}quit/q${Colors.RESET}                    - Exit the shell")
-    println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
-    println("  ${Colors.YELLOW}users list${Colors.RESET}                 - List all users")
-    println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
-    println()
-    println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
-    println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")
-    println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
-    println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID or alias")
-    println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
-    println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET} - Clone objective to another user")
-    println()
-    println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
-    println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
-    println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
-    println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
-    println()
+        println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
+        println("  ${Colors.YELLOW}help/?${Colors.RESET}                     - Show this help")
+        println("  ${Colors.YELLOW}quit/q${Colors.RESET}                    - Exit the shell")
+        println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
+        println("  ${Colors.YELLOW}users list${Colors.RESET}                 - List all users")
+        println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
+        println()
+        println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
+        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID or alias")
+        println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
+        println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET} - Clone objective to another user")
+        println()
+        println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
+        println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
+        println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
+        println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
+        println()
     }
 }
 

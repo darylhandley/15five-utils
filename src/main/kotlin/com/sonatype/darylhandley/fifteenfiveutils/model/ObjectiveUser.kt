@@ -7,10 +7,10 @@ import com.fasterxml.jackson.annotation.JsonProperty
 data class ObjectiveUser(
     @JsonProperty("id")
     val id: Int,
-    
+
     @JsonProperty("name")
     val name: String,
-    
+
     @JsonProperty("avatar_url")
     val avatarUrl: String?
 )

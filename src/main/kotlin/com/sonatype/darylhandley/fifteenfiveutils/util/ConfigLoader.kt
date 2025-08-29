@@ -1,38 +1,41 @@
 package com.sonatype.darylhandley.fifteenfiveutils.util
 
 import java.io.FileInputStream
-import java.util.*
+import java.util.Properties
 
 object ConfigLoader {
-    
+
     private val properties = Properties()
-    
+
     init {
         loadProperties()
     }
-    
+
     private fun loadProperties() {
         try {
             FileInputStream("application.properties").use { fis ->
                 properties.load(fis)
             }
         } catch (e: Exception) {
-            throw RuntimeException("Could not load application.properties. Please copy sample.properties to application.properties and configure your settings.", e)
+            throw RuntimeException(
+                "Could not load application.properties. Please copy sample.properties to application.properties and configure your settings.",
+                e
+            )
         }
     }
-    
+
     fun getSessionId(): String {
         return properties.getProperty("fifteen.five.session.id")
             ?: throw RuntimeException("fifteen.five.session.id not found in application.properties")
     }
-    
+
     fun getCsrfToken(): String {
         return properties.getProperty("fifteen.five.csrf.token")
             ?: throw RuntimeException("fifteen.five.csrf.token not found in application.properties")
     }
 
-  fun getFFCsrfToken(): String {
-    return properties.getProperty("fifteen.ff_csrf_token")
-      ?: throw RuntimeException("fifteen.ff_csrf_token not found in application.properties")
-  }
+    fun getFFCsrfToken(): String {
+        return properties.getProperty("fifteen.ff_csrf_token")
+            ?: throw RuntimeException("fifteen.ff_csrf_token not found in application.properties")
+    }
 }
