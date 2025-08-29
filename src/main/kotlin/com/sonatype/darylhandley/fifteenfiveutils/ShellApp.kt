@@ -184,6 +184,26 @@ fun main() {
                             val targetUserName = userService.listAllUsers()
                                 .find { it.id == targetUserId }?.fullName ?: "User ID $targetUserId"
                             
+                            // Check for duplicate objectives
+                            val existingObjectives = objectiveService.listObjectivesByUser(targetUserId)
+                            val duplicates = existingObjectives.filter { 
+                                it.description.equals(sourceObjective.description, ignoreCase = true) 
+                            }
+                            
+                            if (duplicates.isNotEmpty()) {
+                                println("${Colors.YELLOW}⚠️  WARNING: Found ${duplicates.size} existing objective(s) with matching title:${Colors.RESET}")
+                                duplicates.forEach { duplicate ->
+                                    println("${Colors.YELLOW}   • ID ${duplicate.id}: \"${duplicate.description}\" (${duplicate.getFormattedStartDate()} → ${duplicate.getFormattedEndDate()})${Colors.RESET}")
+                                }
+                                print("${Colors.YELLOW}Continue with clone anyway? (y/N): ${Colors.RESET}")
+                                val duplicateConfirmation = lineReader.readLine()
+                                if (duplicateConfirmation.lowercase() != "y" && duplicateConfirmation.lowercase() != "yes") {
+                                    println("${Colors.YELLOW}Clone cancelled due to duplicate objectives.${Colors.RESET}")
+                                    continue
+                                }
+                                println()
+                            }
+                            
                             // Show preview and get confirmation
                             val preview = objectiveCloneService.buildClonePreview(sourceObjective, targetUserName, targetUserId)
                             print("${Colors.CYAN}$preview${Colors.RESET}")
