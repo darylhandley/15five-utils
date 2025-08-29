@@ -37,7 +37,7 @@ class ShellApp {
     }
 
     fun run() {
-        println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}q${Colors.RESET}' to exit")
+        println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}quit/exit/q${Colors.RESET}' to exit")
         println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
 
         val sessionId = try {
@@ -70,6 +70,7 @@ class ShellApp {
             "help",
             "?",
             "quit",
+            "exit",
             "q",
             "users list",
             "objectives list",
@@ -103,7 +104,7 @@ class ShellApp {
                     "objectives" -> handleObjectivesCommand(tokens)
                     "useralias" -> handleUserAliasCommand(tokens)
                     "help", "?" -> handleHelpCommand()
-                    "quit", "q" -> {
+                    "quit", "exit", "q" -> {
                         println("${Colors.YELLOW}Goodbye!${Colors.RESET}")
                         running = false
                     }
@@ -366,7 +367,7 @@ class ShellApp {
     private fun handleHelpCommand() {
         println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
         println("  ${Colors.YELLOW}help/?${Colors.RESET}                     - Show this help")
-        println("  ${Colors.YELLOW}quit/q${Colors.RESET}                    - Exit the shell")
+        println("  ${Colors.YELLOW}quit/exit/q${Colors.RESET}               - Exit the shell")
         println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
         println("  ${Colors.YELLOW}users list${Colors.RESET}                 - List all users")
         println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
