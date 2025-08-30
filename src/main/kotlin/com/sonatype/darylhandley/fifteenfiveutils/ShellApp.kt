@@ -79,6 +79,7 @@ class ShellApp {
             "exit",
             "q",
             "users list",
+            "users refresh",
             "objectives list",
             "objectives listbyuser",
             "objectives get",
@@ -158,6 +159,14 @@ class ShellApp {
                 println("${Colors.RED}Error fetching users: ${e.message}${Colors.RESET}")
                 e.printStackTrace()
             }
+        } else if (tokens.size == 2 && tokens[1].lowercase() == "refresh") {
+            try {
+                val result = userService.refreshUserCache()
+                println("${Colors.GREEN}$result${Colors.RESET}")
+            } catch (e: Exception) {
+                println("${Colors.RED}Error refreshing user cache: ${e.message}${Colors.RESET}")
+                e.printStackTrace()
+            }
         } else if (tokens.size > 2 && tokens[1].lowercase() == "list") {
             try {
                 val searchTerm = tokens.drop(2).joinToString(" ")
@@ -168,7 +177,7 @@ class ShellApp {
                 e.printStackTrace()
             }
         } else {
-            println("${Colors.RED}Usage: users list [search_term]${Colors.RESET}")
+            println("${Colors.RED}Usage: users <list|refresh> [search_term]${Colors.RESET}")
         }
     }
 
@@ -476,6 +485,7 @@ class ShellApp {
         println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
         println("  ${Colors.YELLOW}users list${Colors.RESET}                 - List all users")
         println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}        - Search for users by name")
+        println("  ${Colors.YELLOW}users refresh${Colors.RESET}              - Refresh user cache from API")
         println()
         println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
         println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")

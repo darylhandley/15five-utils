@@ -121,13 +121,10 @@ class TeamsService(private val userService: UserService, private val aliasServic
         table.addRow("Alias", "User ID", "Full Name")
         table.addRule()
 
-        val users = userService.listAllUsers()
-        val userMap = users.associateBy { it.id }
-
         members.sorted().forEach { alias ->
             val userId = aliasService.resolveUserIdentifier(alias)
             val userName = if (userId != null) {
-                userMap[userId]?.fullName ?: "Unknown User"
+                userService.getUserById(userId)?.fullName ?: "Unknown User"
             } else {
                 "Alias Not Found"
             }
@@ -155,9 +152,6 @@ class TeamsService(private val userService: UserService, private val aliasServic
         table.addRow("Team Name", "Alias", "User Name")
         table.addRule()
 
-        val users = userService.listAllUsers()
-        val userMap = users.associateBy { it.id }
-
         teams.keys.sorted().forEach { teamName ->
             val aliases = teams[teamName]!!.sorted()
             
@@ -167,7 +161,7 @@ class TeamsService(private val userService: UserService, private val aliasServic
                 aliases.forEachIndexed { index, alias ->
                     val userId = aliasService.resolveUserIdentifier(alias)
                     val userName = if (userId != null) {
-                        userMap[userId]?.fullName ?: "Unknown"
+                        userService.getUserById(userId)?.fullName ?: "Unknown"
                     } else {
                         "NotFound"
                     }

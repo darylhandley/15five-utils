@@ -50,9 +50,8 @@ class AliasService(private val userService: UserService? = null, private var tea
         // Validate that the user exists
         userService?.let { service ->
             try {
-                val users = service.listAllUsers()
-                val userExists = users.any { it.id == userId }
-                if (!userExists) {
+                val user = service.getUserById(userId)
+                if (user == null) {
                     return "User ID $userId not found. Please verify the user exists before creating an alias."
                 }
             } catch (e: Exception) {
@@ -129,12 +128,13 @@ class AliasService(private val userService: UserService? = null, private var tea
         table.addRow("Alias", "User ID", "Username")
         table.addRule()
 
-        val users = userService?.listAllUsers() ?: emptyList()
-        val userMap = users.associateBy { it.id }
-
         properties.keys.map { it.toString() }.sorted().forEach { alias ->
             val userId = properties.getProperty(alias)?.toIntOrNull() ?: 0
-            val username = userMap[userId]?.fullName ?: "Unknown User"
+            val username = if (userId > 0) {
+                userService?.getUserById(userId)?.fullName ?: "Unknown User"
+            } else {
+                "Invalid User ID"
+            }
 
             table.addRow(alias, userId.toString(), username)
         }
