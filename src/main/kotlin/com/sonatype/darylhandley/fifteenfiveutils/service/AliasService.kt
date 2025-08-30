@@ -64,7 +64,7 @@ class AliasService(private val userService: UserService? = null, private var tea
         this.teamsService = teamsService
     }
 
-    fun removeAlias(alias: String): String {
+    fun deleteAlias(alias: String): String {
         val properties = loadAliases()
         val lowerAlias = alias.lowercase()
 
@@ -76,7 +76,7 @@ class AliasService(private val userService: UserService? = null, private var tea
         teamsService?.let { teams ->
             if (teams.isAliasInAnyTeam(alias)) {
                 val teamsUsingAlias = teams.getTeamsContainingAlias(alias)
-                return "Cannot remove alias '$alias' - it is used in the following team(s): ${teamsUsingAlias.joinToString(", ")}. Remove it from teams first."
+                return "Cannot delete alias '$alias' - it is used in the following team(s): ${teamsUsingAlias.joinToString(", ")}. Remove it from teams first."
             }
         }
 
@@ -84,7 +84,7 @@ class AliasService(private val userService: UserService? = null, private var tea
         properties.remove(lowerAlias)
         saveAliases(properties)
 
-        return "Alias '$alias' (user ID $userId) removed."
+        return "Alias '$alias' (user ID $userId) deleted."
     }
 
     fun listAliases(): String {

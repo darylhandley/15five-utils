@@ -85,7 +85,7 @@ class ShellApp {
             "objectives clone",
             "useralias create",
             "useralias list",
-            "useralias remove",
+            "useralias delete",
             "teams create",
             "teams get",
             "teams add",
@@ -321,7 +321,7 @@ class ShellApp {
 
     private fun handleUserAliasCommand(tokens: List<String>) {
         if (tokens.size < 2) {
-            println("${Colors.RED}Usage: useralias <create|list|remove> [args...]${Colors.RESET}")
+            println("${Colors.RED}Usage: useralias <create|list|delete> [args...]${Colors.RESET}")
             return
         }
 
@@ -356,23 +356,23 @@ class ShellApp {
                 }
             }
 
-            "remove" -> {
+            "delete" -> {
                 if (tokens.size != 3) {
-                    println("${Colors.RED}Usage: useralias remove <alias>${Colors.RESET}")
+                    println("${Colors.RED}Usage: useralias delete <alias>${Colors.RESET}")
                 } else {
                     val alias = tokens[2]
                     try {
-                        val result = aliasService.removeAlias(alias)
+                        val result = aliasService.deleteAlias(alias)
                         println("${Colors.GREEN}$result${Colors.RESET}")
                     } catch (e: Exception) {
-                        println("${Colors.RED}Error removing alias: ${e.message}${Colors.RESET}")
+                        println("${Colors.RED}Error deleting alias: ${e.message}${Colors.RESET}")
                     }
                 }
             }
 
             else -> {
                 println("${Colors.RED}Unknown useralias subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: useralias <create|list|remove> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: useralias <create|list|delete> [args...]${Colors.RESET}")
             }
         }
     }
@@ -487,7 +487,7 @@ class ShellApp {
         println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
         println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
-        println("  ${Colors.YELLOW}useralias remove${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Remove user alias")
+        println("  ${Colors.YELLOW}useralias delete${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Delete user alias")
         println()
         println("${Colors.BOLD}${Colors.CYAN}Teams:${Colors.RESET}")
         println("  ${Colors.YELLOW}teams create${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}          - Create a new team")
