@@ -47,6 +47,19 @@ class AliasService(private val userService: UserService? = null, private var tea
             return "Invalid alias '$alias'. Aliases must be alphanumeric only (no spaces or special characters)."
         }
 
+        // Validate that the user exists
+        userService?.let { service ->
+            try {
+                val users = service.listAllUsers()
+                val userExists = users.any { it.id == userId }
+                if (!userExists) {
+                    return "User ID $userId not found. Please verify the user exists before creating an alias."
+                }
+            } catch (e: Exception) {
+                return "Error validating user ID $userId: ${e.message}"
+            }
+        }
+
         val properties = loadAliases()
         val lowerAlias = alias.lowercase()
 
