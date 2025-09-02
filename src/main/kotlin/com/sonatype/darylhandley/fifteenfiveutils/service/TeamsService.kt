@@ -188,6 +188,11 @@ class TeamsService(private val userService: UserService, private val aliasServic
         return teams.filterValues { it.contains(alias.lowercase()) }.keys.toList()
     }
 
+    fun getTeamMembers(teamName: String): List<String>? {
+        val teams = loadTeams()
+        return teams[teamName]?.toList()
+    }
+
     fun deleteTeam(teamName: String): String {
         val teams = loadTeams()
 

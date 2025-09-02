@@ -94,6 +94,9 @@ class ShellApp {
             "objectives listbyuser",
             "objectives listbyuser -compact", 
             "objectives listbyuser -c",
+            "objectives listbyteam",
+            "objectives listbyteam -compact",
+            "objectives listbyteam -c",
             "objectives get",
             "objectives clone",
             "useralias create",
@@ -195,18 +198,19 @@ class ShellApp {
 
     private fun handleObjectivesCommand(tokens: List<String>) {
         if (tokens.size < 2) {
-            println("${Colors.RED}Usage: objectives <list|listbyuser|get|clone> [args...]${Colors.RESET}")
+            println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone> [args...]${Colors.RESET}")
             return
         }
 
         when (tokens[1].lowercase()) {
             "list" -> handleObjectivesListCommand(tokens)
             "listbyuser" -> handleObjectivesListByUserCommand(tokens)
+            "listbyteam" -> handleObjectivesListByTeamCommand(tokens)
             "get" -> handleObjectivesGetCommand(tokens)
             "clone" -> handleObjectivesCloneCommand(tokens)
             else -> {
                 println("${Colors.RED}Unknown objectives subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: objectives <list|listbyuser|get|clone> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone> [args...]${Colors.RESET}")
             }
         }
     }
@@ -276,6 +280,85 @@ class ShellApp {
                 println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
                 e.printStackTrace()
             }
+        }
+    }
+
+    private fun handleObjectivesListByTeamCommand(tokens: List<String>) {
+        // Check for compact flag
+        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
+        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
+        
+        if (effectiveTokens.size != 3) {
+            println("${Colors.RED}Usage: objectives listbyteam <team_name> [-compact|-c]${Colors.RESET}")
+            return
+        }
+
+        val teamName = effectiveTokens[2]
+        try {
+            // Get team members
+            val teamMembers = teamsService.getTeamMembers(teamName)
+            if (teamMembers == null) {
+                println("${Colors.RED}Team '$teamName' not found.${Colors.RESET}")
+                return
+            }
+
+            if (teamMembers.isEmpty()) {
+                println("${Colors.YELLOW}Team '$teamName' has no members.${Colors.RESET}")
+                return
+            }
+
+            // Collect objectives for all team members
+            val allObjectives = mutableListOf<com.sonatype.darylhandley.fifteenfiveutils.model.Objective>()
+            val warnings = mutableListOf<String>()
+            val usersWithNoObjectives = mutableListOf<String>()
+
+            teamMembers.forEach { alias ->
+                val userId = aliasService.resolveUserIdentifier(alias)
+                if (userId == null) {
+                    warnings.add("Could not resolve alias '$alias'")
+                } else {
+                    try {
+                        val objectives = objectiveService.listObjectivesByUser(userId)
+                        if (objectives.isEmpty()) {
+                            val user = userService.getUserById(userId)
+                            usersWithNoObjectives.add(user?.fullName ?: "User ID $userId")
+                        } else {
+                            allObjectives.addAll(objectives)
+                        }
+                    } catch (e: Exception) {
+                        warnings.add("Error fetching objectives for alias '$alias': ${e.message}")
+                    }
+                }
+            }
+
+            // Show warnings if any
+            warnings.forEach { warning ->
+                println("${Colors.YELLOW}Warning: $warning${Colors.RESET}")
+            }
+
+            // Sort objectives by username, then objectiveId
+            val sortedObjectives = allObjectives.sortedWith(compareBy({ it.user.name }, { it.id }))
+
+            // Format output
+            val formatted = if (isCompact) {
+                TableFormatter.formatObjectivesCompactTable(sortedObjectives, getTerminalWidth())
+            } else {
+                TableFormatter.formatObjectivesList(sortedObjectives)
+            }
+
+            println("${Colors.GREEN}$formatted${Colors.RESET}")
+
+            // Show users with no objectives
+            if (usersWithNoObjectives.isNotEmpty()) {
+                println("${Colors.YELLOW}Users with no objectives:${Colors.RESET}")
+                usersWithNoObjectives.sorted().forEach { userName ->
+                    println("${Colors.YELLOW}  • $userName${Colors.RESET}")
+                }
+            }
+
+        } catch (e: Exception) {
+            println("${Colors.RED}Error fetching team objectives: ${e.message}${Colors.RESET}")
+            e.printStackTrace()
         }
     }
 
@@ -526,6 +609,7 @@ class ShellApp {
         println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}[-c]${Colors.RESET}          - List top 100 objectives")
         println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit> [-c]${Colors.RESET}  - List objectives (custom limit)")
         println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id> [-c]${Colors.RESET} - List objectives for user ID or alias")
+        println("  ${Colors.YELLOW}objectives listbyteam${Colors.RESET} ${Colors.DIM}<team> [-c]${Colors.RESET} - List objectives for team members")
         println("    ${Colors.DIM}Use -compact or -c for table view instead of detailed view${Colors.RESET}")
         println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET} - Clone objective to another user")
