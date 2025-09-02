@@ -91,42 +91,35 @@ object TableFormatter {
 
         val table = AsciiTable()
         
-        // Calculate column widths based on terminal width
-        val userWidth = 12
-        val linkWidth = 60
-        val descriptionMaxLength = 100
+        // Calculate column widths for 2-column layout
         val tableOverhead = 8  // borders, padding, etc.
-        val availableWidth = terminalWidth - userWidth - linkWidth - tableOverhead
-        val descriptionWidth = (availableWidth * 0.4).toInt()
-        val keyResultsWidth = (availableWidth * 0.4).toInt()
+        val availableWidth = terminalWidth - tableOverhead
+        val objectiveWidth = (availableWidth * 0.6).toInt()  // 60% for objective info
+        val keyResultsWidth = (availableWidth * 0.4).toInt() // 40% for key results
 
-        // Set overall table width (AsciiTable will distribute columns automatically)
+        // Set overall table width
         table.context.setWidth(terminalWidth)
 
         table.addRule()
-        table.addRow("User", "Description", "Key Results", "Link")
+        table.addRow("Objective", "Key Results")
         table.addRule()
 
         objectives.forEach { objective ->
-            val userName = truncateAndWrapText(objective.user.name, userWidth)
-            val description = truncateAndWrapText(objective.description, descriptionMaxLength)
-            val link = "https://sonatype.15five.com/objectives/details/${objective.id}/"
-
-            if (objective.keyResults.isEmpty()) {
-                table.addRow(userName, description, "None", link)
-            } else {
-                objective.keyResults.forEachIndexed { index, keyResult ->
-                    val keyResultText = truncateAndWrapText("• ${keyResult.description}", keyResultsWidth)
-                    
-                    if (index == 0) {
-                        // First row shows all info
-                        table.addRow(userName, description, keyResultText, link)
-                    } else {
-                        // Subsequent rows show only the key result
-                        table.addRow("", "", keyResultText, "")
-                    }
-                }
+            // Combine username, description, and link in first column
+            val objectiveInfo = buildString {
+                append("👤 ${objective.user.name}\n")
+                append("📝 ${truncateAndWrapText(objective.description, 150)}\n")
+                append("🔗 https://sonatype.15five.com/objectives/details/${objective.id}/")
             }
+
+            // Format key results for second column
+            val keyResultsText = if (objective.keyResults.isEmpty()) {
+                "None"
+            } else {
+                objective.keyResults.joinToString("\n") { "• ${it.description}" }
+            }
+
+            table.addRow(objectiveInfo, keyResultsText)
             table.addRule()
         }
 
