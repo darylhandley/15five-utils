@@ -84,18 +84,21 @@ object TableFormatter {
         return result.toString()
     }
 
+    private fun getKeyResultText(keyResults: List<com.sonatype.darylhandley.fifteenfiveutils.model.KeyResult>, index: Int, emptyText: String = ""): String {
+        return if (index < keyResults.size) {
+            val description = truncateAndWrapText(keyResults[index].description, 80)
+            "• $description"
+        } else {
+            emptyText
+        }
+    }
+
     fun formatObjectivesCompactTable(objectives: List<Objective>, terminalWidth: Int = 120): String {
         if (objectives.isEmpty()) {
             return "No objectives found."
         }
 
         val table = AsciiTable()
-        
-        // Calculate column widths for 2-column layout
-        val tableOverhead = 8  // borders, padding, etc.
-        val availableWidth = terminalWidth - tableOverhead
-        val objectiveWidth = (availableWidth * 0.6).toInt()  // 60% for objective info
-        val keyResultsWidth = (availableWidth * 0.4).toInt() // 40% for key results
 
         // Set overall table width
         table.context.setWidth(terminalWidth)
@@ -105,21 +108,31 @@ object TableFormatter {
         table.addRule()
 
         objectives.forEach { objective ->
-            // Combine username, description, and link in first column
-            val objectiveInfo = buildString {
-                append("👤 ${objective.user.name}\n")
-                append("📝 ${truncateAndWrapText(objective.description, 150)}\n")
-                append("🔗 https://sonatype.15five.com/objectives/details/${objective.id}/")
+            // because of the way ascii table works we need to hack
+            // the rows a bit
+            val keyResults = objective.keyResults
+            
+            // add username and first KR
+            val firstKR = getKeyResultText(keyResults, 0, "None")
+            table.addRow("👤 ${objective.user.name}", firstKR)
+
+            // add description and second KR
+            val secondKR = getKeyResultText(keyResults, 1)
+            val description = "📝 ${truncateAndWrapText(objective.description, 150)}"
+            table.addRow(description, secondKR)
+
+            // add link and 3rd KR
+            val thirdKR = getKeyResultText(keyResults, 2)
+            val link = "🔗 https://sonatype.15five.com/objectives/details/${objective.id}/"
+            table.addRow(link, thirdKR)
+
+            // add any remaining KRs
+            if (keyResults.size > 3) {
+                for (i in 3 until keyResults.size) {
+                    table.addRow("", getKeyResultText(keyResults, i))
+                }
             }
 
-            // Format key results for second column
-            val keyResultsText = if (objective.keyResults.isEmpty()) {
-                "None"
-            } else {
-                objective.keyResults.joinToString("\n") { "• ${it.description}" }
-            }
-
-            table.addRow(objectiveInfo, keyResultsText)
             table.addRule()
         }
 
