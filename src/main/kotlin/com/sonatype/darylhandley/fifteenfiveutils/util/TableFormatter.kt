@@ -83,4 +83,51 @@ object TableFormatter {
 
         return result.toString()
     }
+
+    fun formatObjectivesCompactTable(objectives: List<Objective>): String {
+        if (objectives.isEmpty()) {
+            return "No objectives found."
+        }
+
+        val table = AsciiTable()
+        table.addRule()
+        table.addRow("User", "Description", "Key Results", "Link")
+        table.addRule()
+
+        objectives.forEach { objective ->
+            val userName = objective.user.name
+            val description = truncateDescription(objective.description, 50)
+            val keyResults = formatKeyResultsForTable(objective.keyResults)
+            val link = "https://sonatype.15five.com/objectives/details/${objective.id}/"
+
+            table.addRow(userName, description, keyResults, link)
+            table.addRule()
+        }
+
+        table.addRule()
+        return table.render()
+    }
+
+    private fun truncateDescription(description: String, maxLength: Int): String {
+        if (description.length <= maxLength) {
+            return description
+        }
+
+        // Find the last space before maxLength to avoid breaking words
+        val truncateAt = description.lastIndexOf(' ', maxLength)
+        return if (truncateAt > 0) {
+            "${description.substring(0, truncateAt)}..."
+        } else {
+            // If no space found, just truncate at maxLength (edge case)
+            "${description.substring(0, maxLength)}..."
+        }
+    }
+
+    private fun formatKeyResultsForTable(keyResults: List<com.sonatype.darylhandley.fifteenfiveutils.model.KeyResult>): String {
+        if (keyResults.isEmpty()) {
+            return "None"
+        }
+
+        return keyResults.joinToString("\n") { "• ${it.description}" }
+    }
 }

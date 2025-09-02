@@ -81,7 +81,11 @@ class ShellApp {
             "users list",
             "users refresh",
             "objectives list",
+            "objectives list -compact",
+            "objectives list -c",
             "objectives listbyuser",
+            "objectives listbyuser -compact", 
+            "objectives listbyuser -c",
             "objectives get",
             "objectives clone",
             "useralias create",
@@ -200,42 +204,65 @@ class ShellApp {
     }
 
     private fun handleObjectivesListCommand(tokens: List<String>) {
-        if (tokens.size == 2) {
+        // Check for compact flag
+        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
+        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
+        
+        if (effectiveTokens.size == 2) {
             try {
                 val objectives = objectiveService.listObjectives(100)
-                println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
+                val formatted = if (isCompact) {
+                    TableFormatter.formatObjectivesCompactTable(objectives)
+                } else {
+                    TableFormatter.formatObjectivesList(objectives)
+                }
+                println("${Colors.GREEN}$formatted${Colors.RESET}")
             } catch (e: Exception) {
                 println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
                 e.printStackTrace()
             }
-        } else if (tokens.size == 3) {
+        } else if (effectiveTokens.size == 3) {
             try {
-                val limit = tokens[2].toInt()
+                val limit = effectiveTokens[2].toInt()
                 val objectives = objectiveService.listObjectives(limit)
-                println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
+                val formatted = if (isCompact) {
+                    TableFormatter.formatObjectivesCompactTable(objectives)
+                } else {
+                    TableFormatter.formatObjectivesList(objectives)
+                }
+                println("${Colors.GREEN}$formatted${Colors.RESET}")
             } catch (e: NumberFormatException) {
-                println("${Colors.RED}Invalid number: ${tokens[2]}${Colors.RESET}")
+                println("${Colors.RED}Invalid number: ${effectiveTokens[2]}${Colors.RESET}")
             } catch (e: Exception) {
                 println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
                 e.printStackTrace()
             }
         } else {
-            println("${Colors.RED}Usage: objectives list [limit]${Colors.RESET}")
+            println("${Colors.RED}Usage: objectives list [limit] [-compact|-c]${Colors.RESET}")
         }
     }
 
     private fun handleObjectivesListByUserCommand(tokens: List<String>) {
-        if (tokens.size != 3) {
-            println("${Colors.RED}Usage: objectives listbyuser <userid or alias>${Colors.RESET}")
+        // Check for compact flag
+        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
+        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
+        
+        if (effectiveTokens.size != 3) {
+            println("${Colors.RED}Usage: objectives listbyuser <userid or alias> [-compact|-c]${Colors.RESET}")
         } else {
-            val userIdentifier = tokens[2]
+            val userIdentifier = effectiveTokens[2]
             try {
                 val userId = aliasService.resolveUserIdentifier(userIdentifier)
                 if (userId == null) {
                     println("${Colors.RED}Unknown user identifier: $userIdentifier${Colors.RESET}")
                 } else {
                     val objectives = objectiveService.listObjectivesByUser(userId)
-                    println("${Colors.GREEN}${TableFormatter.formatObjectivesList(objectives)}${Colors.RESET}")
+                    val formatted = if (isCompact) {
+                        TableFormatter.formatObjectivesCompactTable(objectives)
+                    } else {
+                        TableFormatter.formatObjectivesList(objectives)
+                    }
+                    println("${Colors.GREEN}$formatted${Colors.RESET}")
                 }
             } catch (e: Exception) {
                 println("${Colors.RED}Error fetching objectives: ${e.message}${Colors.RESET}")
@@ -488,9 +515,10 @@ class ShellApp {
         println("  ${Colors.YELLOW}users refresh${Colors.RESET}              - Refresh user cache from API")
         println()
         println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET}             - List top 100 objectives")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit>${Colors.RESET}     - List objectives (custom limit)")
-        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET} - List objectives for user ID or alias")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}[-c]${Colors.RESET}          - List top 100 objectives")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit> [-c]${Colors.RESET}  - List objectives (custom limit)")
+        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id> [-c]${Colors.RESET} - List objectives for user ID or alias")
+        println("    ${Colors.DIM}Use -compact or -c for table view instead of detailed view${Colors.RESET}")
         println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}        - Get single objective by ID")
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET} - Clone objective to another user")
         println()
