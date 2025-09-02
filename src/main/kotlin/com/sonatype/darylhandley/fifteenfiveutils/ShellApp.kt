@@ -38,6 +38,14 @@ class ShellApp {
         return input.trim().split("\\s+".toRegex()).filter { it.isNotEmpty() }
     }
 
+    private fun getTerminalWidth(): Int {
+        return try {
+            terminal.width
+        } catch (e: Exception) {
+            120 // Fallback width if detection fails
+        }
+    }
+
     fun run() {
         println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}quit/exit/q${Colors.RESET}' to exit")
         println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
@@ -212,7 +220,7 @@ class ShellApp {
             try {
                 val objectives = objectiveService.listObjectives(100)
                 val formatted = if (isCompact) {
-                    TableFormatter.formatObjectivesCompactTable(objectives)
+                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                 } else {
                     TableFormatter.formatObjectivesList(objectives)
                 }
@@ -226,7 +234,7 @@ class ShellApp {
                 val limit = effectiveTokens[2].toInt()
                 val objectives = objectiveService.listObjectives(limit)
                 val formatted = if (isCompact) {
-                    TableFormatter.formatObjectivesCompactTable(objectives)
+                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                 } else {
                     TableFormatter.formatObjectivesList(objectives)
                 }
@@ -258,7 +266,7 @@ class ShellApp {
                 } else {
                     val objectives = objectiveService.listObjectivesByUser(userId)
                     val formatted = if (isCompact) {
-                        TableFormatter.formatObjectivesCompactTable(objectives)
+                        TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                     } else {
                         TableFormatter.formatObjectivesList(objectives)
                     }

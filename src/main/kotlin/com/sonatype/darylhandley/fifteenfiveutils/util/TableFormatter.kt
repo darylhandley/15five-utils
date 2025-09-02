@@ -84,50 +84,72 @@ object TableFormatter {
         return result.toString()
     }
 
-    fun formatObjectivesCompactTable(objectives: List<Objective>): String {
+    fun formatObjectivesCompactTable(objectives: List<Objective>, terminalWidth: Int = 120): String {
         if (objectives.isEmpty()) {
             return "No objectives found."
         }
 
         val table = AsciiTable()
+        
+        // Calculate column widths based on terminal width
+        val userWidth = 12
+        val linkWidth = 60
+        val descriptionMaxLength = 100
+        val tableOverhead = 8  // borders, padding, etc.
+        val availableWidth = terminalWidth - userWidth - linkWidth - tableOverhead
+        val descriptionWidth = (availableWidth * 0.4).toInt()
+        val keyResultsWidth = (availableWidth * 0.4).toInt()
+
+        // Set overall table width (AsciiTable will distribute columns automatically)
+        table.context.setWidth(terminalWidth)
+
         table.addRule()
         table.addRow("User", "Description", "Key Results", "Link")
         table.addRule()
 
         objectives.forEach { objective ->
-            val userName = objective.user.name
-            val description = truncateDescription(objective.description, 50)
-            val keyResults = formatKeyResultsForTable(objective.keyResults)
+            val userName = truncateAndWrapText(objective.user.name, userWidth)
+            val description = truncateAndWrapText(objective.description, descriptionMaxLength)
             val link = "https://sonatype.15five.com/objectives/details/${objective.id}/"
 
-            table.addRow(userName, description, keyResults, link)
+            if (objective.keyResults.isEmpty()) {
+                table.addRow(userName, description, "None", link)
+            } else {
+                objective.keyResults.forEachIndexed { index, keyResult ->
+                    val keyResultText = truncateAndWrapText("• ${keyResult.description}", keyResultsWidth)
+                    
+                    if (index == 0) {
+                        // First row shows all info
+                        table.addRow(userName, description, keyResultText, link)
+                    } else {
+                        // Subsequent rows show only the key result
+                        table.addRow("", "", keyResultText, "")
+                    }
+                }
+            }
             table.addRule()
         }
 
-        table.addRule()
         return table.render()
     }
 
-    private fun truncateDescription(description: String, maxLength: Int): String {
-        if (description.length <= maxLength) {
-            return description
+    private fun truncateAndWrapText(text: String, maxWidth: Int): String {
+        if (text.length <= maxWidth) {
+            return text
         }
 
-        // Find the last space before maxLength to avoid breaking words
-        val truncateAt = description.lastIndexOf(' ', maxLength)
-        return if (truncateAt > 0) {
-            "${description.substring(0, truncateAt)}..."
+        // First try to truncate at word boundary with "..."  
+        val truncateAt = text.lastIndexOf(' ', maxWidth - 3) // Reserve 3 chars for "..."
+        val truncated = if (truncateAt > 0) {
+            "${text.substring(0, truncateAt)}..."
         } else {
-            // If no space found, just truncate at maxLength (edge case)
-            "${description.substring(0, maxLength)}..."
-        }
-    }
-
-    private fun formatKeyResultsForTable(keyResults: List<com.sonatype.darylhandley.fifteenfiveutils.model.KeyResult>): String {
-        if (keyResults.isEmpty()) {
-            return "None"
+            // If no space found, just truncate with "..."
+            "${text.substring(0, maxWidth - 3)}..."
         }
 
-        return keyResults.joinToString("\n") { "• ${it.description}" }
+        // If truncated version is still too long, let AsciiTable handle wrapping
+        // (AsciiTable will wrap automatically when column width is set)
+        return truncated
     }
+
 }
