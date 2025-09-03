@@ -25,13 +25,13 @@ object ConfigLoader {
     }
 
     fun getSessionId(): String {
-        return properties.getProperty("fifteen.five.session.id")
-            ?: throw RuntimeException("fifteen.five.session.id not found in application.properties")
+        return properties.getProperty("fifteen.five.sessionid")
+            ?: throw RuntimeException("fifteen.five.sessionid not found in application.properties")
     }
 
-    fun getCsrfToken(): String {
-        return properties.getProperty("fifteen.five.csrf.token")
-            ?: throw RuntimeException("fifteen.five.csrf.token not found in application.properties")
+    fun getCsrfMiddlewareToken(): String {
+        return properties.getProperty("fifteen.five.csrfmiddlewaretoken")
+            ?: throw RuntimeException("fifteen.five.csrfmiddlewaretoken not found in application.properties")
     }
 
     fun getFFCsrfToken(): String {

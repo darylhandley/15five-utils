@@ -52,7 +52,7 @@ class ObjectiveCloneService(private val sessionId: String) {
         val formBuilder = FormBody.Builder()
 
         // CSRF token from configuration
-        formBuilder.add("csrfmiddlewaretoken", ConfigLoader.getCsrfToken())
+        formBuilder.add("csrfmiddlewaretoken", ConfigLoader.getCsrfMiddlewareToken())
 
         // Django formset management for key results
         formBuilder.add("key-result-TOTAL_FORMS", sourceObjective.keyResults.size.toString())
@@ -119,15 +119,14 @@ class ObjectiveCloneService(private val sessionId: String) {
         //            println("  ${formData.name(i)}=${formData.value(i)}")
         //        }
 
-        val ffCsrfToken = ConfigLoader.getCsrfToken()
-        val xCSRFToken = ConfigLoader.getCsrfToken()
+        val ffCsrfToken = ConfigLoader.getCsrfMiddlewareToken()
+        val xCSRFToken = ConfigLoader.getCsrfMiddlewareToken()
 
         val request = Request.Builder()
             .url("https://sonatype.15five.com/objectives/create/")
             .post(formData)
             .header("Origin", "https://sonatype.15five.com")
             .header("Referer", "https://sonatype.15five.com/objectives/create/")
-            .header("X-CSRFToken", "${xCSRFToken}")
             .header("Cookie", "ff_csrf_token=${ffCsrfToken}; sessionid=${sessionId};")
             .build()
 

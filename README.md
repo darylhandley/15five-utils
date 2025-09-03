@@ -34,6 +34,33 @@ A simple interactive command-line shell application built with Kotlin and Maven.
 
 ## Building and Running
 
+### Setup Secrets 
+
+Copy application.properties.example to application.properties. Once this is copied we need to set 3 secret fields. 
+Since this whole app is a bit of a hack we will need to get and 15Five sessionids and tokens from your browser. 
+Instructions here are for Chrome.
+
+#### Get sessionid and ff_csrf_token
+
+1. Go to objectives page in 15Five. https://sonatype.15five.com/objectives/dashboard/?filters=redesign&state=current
+2. Open developer toolbar
+3. Click on Application and on the left bar naviagte to Storage -> Cookies -> https://sonatype.15five.com/
+4. Type sessionid in the filter to look for cookie sessionid 
+5. Copy the value into your application.properties file under the key `sessionid`
+6. Repeat steps 4 and 5 for the cookie ff_csrf_token
+
+
+#### Get csrfmiddlewaretoken
+
+We get the csrfmiddleware token from the create objective form. 
+
+1. Go to create objectives page in 15Five
+2. Open the developer toolbar 
+3. Go to Elements
+4. Hit Cmd+F to search 
+5. Type csrfmiddlewaretoken
+6. Find the hidden field and copy the value into your application.properties file under the key `csrfmiddlewaretoken`
+
 ### Compile the Application
 
 ```bash

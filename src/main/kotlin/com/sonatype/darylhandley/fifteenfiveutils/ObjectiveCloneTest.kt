@@ -20,7 +20,7 @@ object ObjectiveCloneTest {
             // Load configuration
             println("📋 Loading configuration...")
             val sessionId = ConfigLoader.getSessionId()
-            val csrfToken = ConfigLoader.getCsrfToken()
+            val csrfToken = ConfigLoader.getCsrfMiddlewareToken()
             println("✅ Session ID loaded: ${sessionId.take(10)}...")
             println("✅ CSRF Token loaded: ${csrfToken.take(10)}...")
 
