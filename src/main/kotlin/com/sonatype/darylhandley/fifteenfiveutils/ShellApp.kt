@@ -100,6 +100,7 @@ class ShellApp {
             "objectives get",
             "objectives clone",
             "useralias create",
+            "useralias createbysearch",
             "useralias list",
             "useralias delete",
             "teams create",
@@ -448,7 +449,7 @@ class ShellApp {
 
     private fun handleUserAliasCommand(tokens: List<String>) {
         if (tokens.size < 2) {
-            println("${Colors.RED}Usage: useralias <create|list|delete> [args...]${Colors.RESET}")
+            println("${Colors.RED}Usage: useralias <create|createbysearch|list|delete> [args...]${Colors.RESET}")
             return
         }
 
@@ -497,9 +498,52 @@ class ShellApp {
                 }
             }
 
+            "createbysearch" -> {
+                if (tokens.size < 4) {
+                    println("${Colors.RED}Usage: useralias createbysearch <alias> <search_term>${Colors.RESET}")
+                } else {
+                    try {
+                        val alias = tokens[2]
+                        val searchTerm = tokens.drop(3).joinToString(" ")
+                        
+                        val users = aliasService.searchUsersForAlias(searchTerm)
+                        
+                        when {
+                            users == null -> {
+                                println("${Colors.RED}Error: User service not available${Colors.RESET}")
+                            }
+                            users.isEmpty() -> {
+                                println("${Colors.RED}No users found matching '$searchTerm'${Colors.RESET}")
+                            }
+                            users.size == 1 -> {
+                                val user = users[0]
+                                print("${Colors.CYAN}Create alias '$alias' for user '${user.fullName}' (ID: ${user.id})? (y/N): ${Colors.RESET}")
+                                val confirmation = lineReader.readLine()
+                                
+                                if (confirmation.lowercase() == "y" || confirmation.lowercase() == "yes") {
+                                    val result = aliasService.createAlias(alias, user.id)
+                                    println("${Colors.GREEN}$result${Colors.RESET}")
+                                } else {
+                                    println("${Colors.YELLOW}Alias creation cancelled.${Colors.RESET}")
+                                }
+                            }
+                            else -> {
+                                println("${Colors.RED}Multiple users found matching '$searchTerm':${Colors.RESET}")
+                                users.forEach { user ->
+                                    println("${Colors.RED}  • ${user.fullName} (ID: ${user.id})${Colors.RESET}")
+                                }
+                                println("${Colors.RED}Please make your search more specific.${Colors.RESET}")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        println("${Colors.RED}Error searching for users: ${e.message}${Colors.RESET}")
+                    }
+                }
+            }
+
             else -> {
                 println("${Colors.RED}Unknown useralias subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: useralias <create|list|delete> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: useralias <create|createbysearch|list|delete> [args...]${Colors.RESET}")
             }
         }
     }
@@ -616,6 +660,7 @@ class ShellApp {
         println()
         println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET} - Create user alias")
+        println("  ${Colors.YELLOW}useralias createbysearch${Colors.RESET} ${Colors.DIM}<alias> <search>${Colors.RESET} - Create alias by searching for user")
         println("  ${Colors.YELLOW}useralias list${Colors.RESET}              - List all user aliases")
         println("  ${Colors.YELLOW}useralias delete${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}      - Delete user alias")
         println()

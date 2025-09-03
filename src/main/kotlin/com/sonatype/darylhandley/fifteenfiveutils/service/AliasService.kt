@@ -1,5 +1,6 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
+import com.sonatype.darylhandley.fifteenfiveutils.model.User
 import de.vandermeer.asciitable.AsciiTable
 import java.io.File
 import java.io.FileInputStream
@@ -152,6 +153,10 @@ class AliasService(private val userService: UserService? = null, private var tea
         val lowerInput = input.lowercase()
 
         return properties.getProperty(lowerInput)?.toIntOrNull()
+    }
+
+    fun searchUsersForAlias(searchTerm: String): List<User>? {
+        return userService?.searchUsers(searchTerm)
     }
 
     fun isAlias(input: String): Boolean {
