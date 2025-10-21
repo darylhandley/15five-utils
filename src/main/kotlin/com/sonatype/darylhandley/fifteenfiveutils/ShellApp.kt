@@ -89,14 +89,14 @@ class ShellApp {
             "users list",
             "users refresh",
             "objectives list",
-            "objectives list -compact",
-            "objectives list -c",
+            "objectives list -verbose",
+            "objectives list -v",
             "objectives listbyuser",
-            "objectives listbyuser -compact", 
-            "objectives listbyuser -c",
+            "objectives listbyuser -verbose",
+            "objectives listbyuser -v",
             "objectives listbyteam",
-            "objectives listbyteam -compact",
-            "objectives listbyteam -c",
+            "objectives listbyteam -verbose",
+            "objectives listbyteam -v",
             "objectives get",
             "objectives clone",
             "useralias create",
@@ -217,17 +217,17 @@ class ShellApp {
     }
 
     private fun handleObjectivesListCommand(tokens: List<String>) {
-        // Check for compact flag
-        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
-        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
-        
+        // Check for verbose flag
+        val isVerbose = tokens.lastOrNull()?.lowercase() in listOf("-verbose", "-v")
+        val effectiveTokens = if (isVerbose) tokens.dropLast(1) else tokens
+
         if (effectiveTokens.size == 2) {
             try {
                 val objectives = objectiveService.listObjectives(100)
-                val formatted = if (isCompact) {
-                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
-                } else {
+                val formatted = if (isVerbose) {
                     TableFormatter.formatObjectivesList(objectives)
+                } else {
+                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                 }
                 println("${Colors.GREEN}$formatted${Colors.RESET}")
             } catch (e: Exception) {
@@ -238,10 +238,10 @@ class ShellApp {
             try {
                 val limit = effectiveTokens[2].toInt()
                 val objectives = objectiveService.listObjectives(limit)
-                val formatted = if (isCompact) {
-                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
-                } else {
+                val formatted = if (isVerbose) {
                     TableFormatter.formatObjectivesList(objectives)
+                } else {
+                    TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                 }
                 println("${Colors.GREEN}$formatted${Colors.RESET}")
             } catch (e: NumberFormatException) {
@@ -251,17 +251,17 @@ class ShellApp {
                 e.printStackTrace()
             }
         } else {
-            println("${Colors.RED}Usage: objectives list [limit] [-compact|-c]${Colors.RESET}")
+            println("${Colors.RED}Usage: objectives list [limit] [-verbose|-v]${Colors.RESET}")
         }
     }
 
     private fun handleObjectivesListByUserCommand(tokens: List<String>) {
-        // Check for compact flag
-        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
-        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
-        
+        // Check for verbose flag
+        val isVerbose = tokens.lastOrNull()?.lowercase() in listOf("-verbose", "-v")
+        val effectiveTokens = if (isVerbose) tokens.dropLast(1) else tokens
+
         if (effectiveTokens.size != 3) {
-            println("${Colors.RED}Usage: objectives listbyuser <userid or alias> [-compact|-c]${Colors.RESET}")
+            println("${Colors.RED}Usage: objectives listbyuser <userid or alias> [-verbose|-v]${Colors.RESET}")
         } else {
             val userIdentifier = effectiveTokens[2]
             try {
@@ -270,10 +270,10 @@ class ShellApp {
                     println("${Colors.RED}Unknown user identifier: $userIdentifier${Colors.RESET}")
                 } else {
                     val objectives = objectiveService.listObjectivesByUser(userId)
-                    val formatted = if (isCompact) {
-                        TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
-                    } else {
+                    val formatted = if (isVerbose) {
                         TableFormatter.formatObjectivesList(objectives)
+                    } else {
+                        TableFormatter.formatObjectivesCompactTable(objectives, getTerminalWidth())
                     }
                     println("${Colors.GREEN}$formatted${Colors.RESET}")
                 }
@@ -285,12 +285,12 @@ class ShellApp {
     }
 
     private fun handleObjectivesListByTeamCommand(tokens: List<String>) {
-        // Check for compact flag
-        val isCompact = tokens.lastOrNull()?.lowercase() in listOf("-compact", "-c")
-        val effectiveTokens = if (isCompact) tokens.dropLast(1) else tokens
-        
+        // Check for verbose flag
+        val isVerbose = tokens.lastOrNull()?.lowercase() in listOf("-verbose", "-v")
+        val effectiveTokens = if (isVerbose) tokens.dropLast(1) else tokens
+
         if (effectiveTokens.size != 3) {
-            println("${Colors.RED}Usage: objectives listbyteam <team_name> [-compact|-c]${Colors.RESET}")
+            println("${Colors.RED}Usage: objectives listbyteam <team_name> [-verbose|-v]${Colors.RESET}")
             return
         }
 
@@ -341,10 +341,10 @@ class ShellApp {
             val sortedObjectives = allObjectives.sortedWith(compareBy({ it.user.name }, { it.id }))
 
             // Format output
-            val formatted = if (isCompact) {
-                TableFormatter.formatObjectivesCompactTable(sortedObjectives, getTerminalWidth())
-            } else {
+            val formatted = if (isVerbose) {
                 TableFormatter.formatObjectivesList(sortedObjectives)
+            } else {
+                TableFormatter.formatObjectivesCompactTable(sortedObjectives, getTerminalWidth())
             }
 
             println("${Colors.GREEN}$formatted${Colors.RESET}")
@@ -650,11 +650,11 @@ class ShellApp {
         println("  ${Colors.YELLOW}users refresh${Colors.RESET}${" ".repeat(30)} - Refresh user cache from API")
         println()
         println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}[-c]${Colors.RESET}${" ".repeat(25)} - List top 100 objectives")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit> [-c]${Colors.RESET}${" ".repeat(17)} - List objectives (custom limit)")
-        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id> [-c]${Colors.RESET}${" ".repeat(14)} - List objectives for user ID or alias")
-        println("  ${Colors.YELLOW}objectives listbyteam${Colors.RESET} ${Colors.DIM}<team> [-c]${Colors.RESET}${" ".repeat(12)} - List objectives for team members")
-        println("    ${Colors.DIM}Use -compact or -c for table view instead of detailed view${Colors.RESET}")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}[-v]${Colors.RESET}${" ".repeat(25)} - List top 100 objectives")
+        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit> [-v]${Colors.RESET}${" ".repeat(17)} - List objectives (custom limit)")
+        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id> [-v]${Colors.RESET}${" ".repeat(14)} - List objectives for user ID or alias")
+        println("  ${Colors.YELLOW}objectives listbyteam${Colors.RESET} ${Colors.DIM}<team> [-v]${Colors.RESET}${" ".repeat(12)} - List objectives for team members")
+        println("    ${Colors.DIM}Use -verbose or -v for detailed view instead of compact table${Colors.RESET}")
         println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(26)} - Get single objective by ID")
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET}${" ".repeat(17)} - Clone objective to another user")
         println()
