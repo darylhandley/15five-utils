@@ -37,21 +37,36 @@ class ShellApp {
     }
 
     fun run() {
+        printWelcomeBanner()
+
+        if (!initialize()) {
+            return
+        }
+
+        runShell()
+
+        cleanup()
+    }
+
+    private fun printWelcomeBanner() {
         println("${Colors.BOLD}${Colors.CYAN}15Five Utils Shell${Colors.RESET} - Type '${Colors.YELLOW}help${Colors.RESET}' or '${Colors.YELLOW}?${Colors.RESET}' for commands or '${Colors.YELLOW}quit/exit/q${Colors.RESET}' to exit")
         println("${Colors.DIM}${"─".repeat(60)}${Colors.RESET}")
+    }
 
+    private fun initialize(): Boolean {
+        // Load configuration
         val sessionId = try {
             ConfigLoader.getSessionId()
         } catch (e: Exception) {
             println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
-            return
+            return false
         }
 
         val csrfToken = try {
             ConfigLoader.getCsrfMiddlewareToken()
         } catch (e: Exception) {
             println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
-            return
+            return false
         }
 
         // Initialize services
@@ -125,6 +140,10 @@ class ShellApp {
         // Initialize command registry
         commands = initializeCommands()
 
+        return true
+    }
+
+    private fun runShell() {
         var running = true
 
         while (running) {
@@ -171,7 +190,9 @@ class ShellApp {
                 break
             }
         }
+    }
 
+    private fun cleanup() {
         terminal.close()
 
         // added for fast shutdown since okhttp client wants to hold onto connections
@@ -230,41 +251,80 @@ class ShellApp {
         return null
     }
 
+    private data class HelpEntry(
+        val command: String,
+        val params: String = "",
+        val description: String,
+        val indent: Int = 2
+    )
+
     private fun handleHelpCommand() {
-        println("${Colors.BOLD}${Colors.CYAN}General:${Colors.RESET}")
-        println("  ${Colors.YELLOW}help/?${Colors.RESET}${" ".repeat(37)} - Show this help")
-        println("  ${Colors.YELLOW}quit/exit/q${Colors.RESET}${" ".repeat(32)} - Exit the shell")
-        println("${Colors.BOLD}${Colors.CYAN}Users:${Colors.RESET}")
-        println("  ${Colors.YELLOW}users list${Colors.RESET}${" ".repeat(33)} - List all users")
-        println("  ${Colors.YELLOW}users list${Colors.RESET} ${Colors.DIM}<search>${Colors.RESET}${" ".repeat(25)} - Search for users by name")
-        println("  ${Colors.YELLOW}users refresh${Colors.RESET}${" ".repeat(30)} - Refresh user cache from API")
-        println()
-        println("${Colors.BOLD}${Colors.CYAN}Objectives:${Colors.RESET}")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}[-v]${Colors.RESET}${" ".repeat(25)} - List top 100 objectives")
-        println("  ${Colors.YELLOW}objectives list${Colors.RESET} ${Colors.DIM}<limit> [-v]${Colors.RESET}${" ".repeat(17)} - List objectives (custom limit)")
-        println("  ${Colors.YELLOW}objectives listbyuser${Colors.RESET} ${Colors.DIM}<id> [-v]${Colors.RESET}${" ".repeat(14)} - List objectives for user ID or alias")
-        println("  ${Colors.YELLOW}objectives listbyteam${Colors.RESET} ${Colors.DIM}<team> [-v]${Colors.RESET}${" ".repeat(12)} - List objectives for team members")
-        println("    ${Colors.DIM}Use -verbose or -v for detailed view instead of compact table${Colors.RESET}")
-        println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(26)} - Get single objective by ID")
-        println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET}${" ".repeat(17)} - Clone objective to another user")
-        println("  ${Colors.YELLOW}objectives teamclone${Colors.RESET} ${Colors.DIM}<id> <team>${Colors.RESET}${" ".repeat(13)} - Clone objective to all team members")
-        println("  ${Colors.YELLOW}objectives updateprogress${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(14)} - Copy key result progress from parent")
-        println("  ${Colors.YELLOW}objectives updatechildprogress${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(9)} - Update all children to match parent progress")
-        println()
-        println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
-        println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET}${" ".repeat(12)} - Create user alias")
-        println("  ${Colors.YELLOW}useralias createbysearch${Colors.RESET} ${Colors.DIM}<alias> <search>${Colors.RESET}${" ".repeat(4)} - Create alias by searching for user")
-        println("  ${Colors.YELLOW}useralias list${Colors.RESET}${" ".repeat(29)} - List all user aliases")
-        println("  ${Colors.YELLOW}useralias delete${Colors.RESET} ${Colors.DIM}<alias>${Colors.RESET}${" ".repeat(22)} - Delete user alias")
-        println()
-        println("${Colors.BOLD}${Colors.CYAN}Teams:${Colors.RESET}")
-        println("  ${Colors.YELLOW}teams create${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}${" ".repeat(27)} - Create a new team")
-        println("  ${Colors.YELLOW}teams get${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}${" ".repeat(30)} - Show team members with details")
-        println("  ${Colors.YELLOW}teams add${Colors.RESET} ${Colors.DIM}<team> <alias>${Colors.RESET}${" ".repeat(22)} - Add alias to team")
-        println("  ${Colors.YELLOW}teams remove${Colors.RESET} ${Colors.DIM}<team> <alias>${Colors.RESET}${" ".repeat(19)} - Remove alias from team")
-        println("  ${Colors.YELLOW}teams delete${Colors.RESET} ${Colors.DIM}<name>${Colors.RESET}${" ".repeat(27)} - Delete team (keeps aliases)")
-        println("  ${Colors.YELLOW}teams list${Colors.RESET}${" ".repeat(33)} - List all teams")
-        println()
+        val sections = mapOf(
+            "General" to listOf(
+                HelpEntry("help/?", description = "Show this help"),
+                HelpEntry("quit/exit/q", description = "Exit the shell")
+            ),
+            "Users" to listOf(
+                HelpEntry("users list", description = "List all users"),
+                HelpEntry("users list", "<search>", "Search for users by name"),
+                HelpEntry("users refresh", description = "Refresh user cache from API")
+            ),
+            "Objectives" to listOf(
+                HelpEntry("objectives list", "[-v]", "List top 100 objectives"),
+                HelpEntry("objectives list", "<limit> [-v]", "List objectives (custom limit)"),
+                HelpEntry("objectives listbyuser", "<id> [-v]", "List objectives for user ID or alias"),
+                HelpEntry("objectives listbyteam", "<team> [-v]", "List objectives for team members"),
+                HelpEntry("", "", "Use -verbose or -v for detailed view instead of compact table", indent = 4),
+                HelpEntry("objectives get", "<id>", "Get single objective by ID"),
+                HelpEntry("objectives clone", "<id> <user>", "Clone objective to another user"),
+                HelpEntry("objectives teamclone", "<id> <team>", "Clone objective to all team members"),
+                HelpEntry("objectives updateprogress", "<id>", "Copy key result progress from parent"),
+                HelpEntry("objectives updatechildprogress", "<id>", "Update all children to match parent progress")
+            ),
+            "User Aliases" to listOf(
+                HelpEntry("useralias create", "<alias> <userid>", "Create user alias"),
+                HelpEntry("useralias createbysearch", "<alias> <search>", "Create alias by searching for user"),
+                HelpEntry("useralias list", description = "List all user aliases"),
+                HelpEntry("useralias delete", "<alias>", "Delete user alias")
+            ),
+            "Teams" to listOf(
+                HelpEntry("teams create", "<name>", "Create a new team"),
+                HelpEntry("teams get", "<name>", "Show team members with details"),
+                HelpEntry("teams add", "<team> <alias>", "Add alias to team"),
+                HelpEntry("teams remove", "<team> <alias>", "Remove alias from team"),
+                HelpEntry("teams delete", "<name>", "Delete team (keeps aliases)"),
+                HelpEntry("teams list", description = "List all teams")
+            )
+        )
+
+        printHelpSections(sections)
+    }
+
+    private fun printHelpSections(sections: Map<String, List<HelpEntry>>) {
+        // Calculate max width for alignment (excluding indented notes)
+        val maxWidth = sections.values.flatten()
+            .filter { it.indent == 2 }  // Only regular commands
+            .maxOf {
+                it.command.length + it.params.length +
+                        (if (it.params.isNotEmpty()) 1 else 0)  // space between command and params
+            }
+
+        sections.forEach { (section, entries) ->
+            println("${Colors.BOLD}${Colors.CYAN}$section:${Colors.RESET}")
+            entries.forEach { entry ->
+                if (entry.command.isEmpty()) {
+                    // Sub-note/indented line
+                    println("${" ".repeat(entry.indent)}${Colors.DIM}${entry.description}${Colors.RESET}")
+                } else {
+                    val commandPart = "${Colors.YELLOW}${entry.command}${Colors.RESET}"
+                    val paramsPart = if (entry.params.isNotEmpty()) " ${Colors.DIM}${entry.params}${Colors.RESET}" else ""
+                    val fullCommand = entry.command + if (entry.params.isNotEmpty()) " ${entry.params}" else ""
+                    val padding = " ".repeat(maxWidth - fullCommand.length + 3)
+                    println("${" ".repeat(entry.indent)}$commandPart$paramsPart$padding - ${entry.description}")
+                }
+            }
+            println()
+        }
     }
 }
 
