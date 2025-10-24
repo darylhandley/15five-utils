@@ -42,7 +42,10 @@ data class Objective(
     val keyResults: List<KeyResult>,
 
     @JsonProperty("tags")
-    val tags: List<Tag>
+    val tags: List<Tag>,
+
+    @JsonProperty("parent")
+    val parent: Int?
 ) {
     fun getFormattedStartDate(): String {
         return try {

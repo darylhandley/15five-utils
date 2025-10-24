@@ -57,8 +57,15 @@ class ShellApp {
             return
         }
 
+        val csrfToken = try {
+            ConfigLoader.getCsrfMiddlewareToken()
+        } catch (e: Exception) {
+            println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
+            return
+        }
+
         userService = UserService(sessionId)
-        objectiveService = ObjectiveService(sessionId)
+        objectiveService = ObjectiveService(sessionId, csrfToken)
         objectiveCloneService = ObjectiveCloneService(sessionId)
         aliasService = AliasService(userService)
         teamsService = TeamsService(userService, aliasService)
@@ -100,6 +107,7 @@ class ShellApp {
             "objectives get",
             "objectives clone",
             "objectives teamclone",
+            "objectives updateprogress",
             "useralias create",
             "useralias createbysearch",
             "useralias list",
@@ -211,9 +219,10 @@ class ShellApp {
             "get" -> handleObjectivesGetCommand(tokens)
             "clone" -> handleObjectivesCloneCommand(tokens)
             "teamclone" -> handleObjectivesTeamCloneCommand(tokens)
+            "updateprogress" -> handleObjectivesUpdateProgressCommand(tokens)
             else -> {
                 println("${Colors.RED}Unknown objectives subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone|teamclone> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone|teamclone|updateprogress> [args...]${Colors.RESET}")
             }
         }
     }
@@ -567,6 +576,25 @@ class ShellApp {
         }
     }
 
+    private fun handleObjectivesUpdateProgressCommand(tokens: List<String>) {
+        if (tokens.size != 3) {
+            println("${Colors.RED}Usage: objectives updateprogress <child_objective_id>${Colors.RESET}")
+        } else {
+            try {
+                val childObjectiveId = tokens[2].toInt()
+                val result = objectiveService.updateProgressFromParent(childObjectiveId)
+                println("${Colors.GREEN}$result${Colors.RESET}")
+            } catch (e: NumberFormatException) {
+                println("${Colors.RED}Invalid objective ID: ${tokens[2]}${Colors.RESET}")
+            } catch (e: IllegalStateException) {
+                println("${Colors.RED}Error: ${e.message}${Colors.RESET}")
+            } catch (e: Exception) {
+                println("${Colors.RED}Error updating progress: ${e.message}${Colors.RESET}")
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun buildTeamClonePreview(
         sourceObjective: com.sonatype.darylhandley.fifteenfiveutils.model.Objective,
         teamName: String,
@@ -822,6 +850,7 @@ class ShellApp {
         println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(26)} - Get single objective by ID")
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET}${" ".repeat(17)} - Clone objective to another user")
         println("  ${Colors.YELLOW}objectives teamclone${Colors.RESET} ${Colors.DIM}<id> <team>${Colors.RESET}${" ".repeat(13)} - Clone objective to all team members")
+        println("  ${Colors.YELLOW}objectives updateprogress${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(14)} - Copy key result progress from parent")
         println()
         println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET}${" ".repeat(12)} - Create user alias")

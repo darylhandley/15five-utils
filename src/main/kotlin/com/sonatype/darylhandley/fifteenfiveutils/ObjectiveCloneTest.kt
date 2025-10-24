@@ -27,7 +27,7 @@ object ObjectiveCloneTest {
             // Initialize services
             println("\n🔧 Initializing services...")
             val userService = UserService(sessionId)
-            val objectiveService = ObjectiveService(sessionId)
+            val objectiveService = ObjectiveService(sessionId, csrfToken)
             val objectiveCloneService = ObjectiveCloneService(sessionId)
             val aliasService = AliasService(userService)
             println("✅ Services initialized")
