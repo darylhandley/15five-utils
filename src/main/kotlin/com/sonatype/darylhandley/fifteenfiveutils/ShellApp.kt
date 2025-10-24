@@ -108,6 +108,7 @@ class ShellApp {
             "objectives clone",
             "objectives teamclone",
             "objectives updateprogress",
+            "objectives updatechildprogress",
             "useralias create",
             "useralias createbysearch",
             "useralias list",
@@ -220,9 +221,10 @@ class ShellApp {
             "clone" -> handleObjectivesCloneCommand(tokens)
             "teamclone" -> handleObjectivesTeamCloneCommand(tokens)
             "updateprogress" -> handleObjectivesUpdateProgressCommand(tokens)
+            "updatechildprogress" -> handleObjectivesUpdateChildProgressCommand(tokens)
             else -> {
                 println("${Colors.RED}Unknown objectives subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone|teamclone|updateprogress> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone|teamclone|updateprogress|updatechildprogress> [args...]${Colors.RESET}")
             }
         }
     }
@@ -595,6 +597,47 @@ class ShellApp {
         }
     }
 
+    private fun handleObjectivesUpdateChildProgressCommand(tokens: List<String>) {
+        if (tokens.size != 3) {
+            println("${Colors.RED}Usage: objectives updatechildprogress <parent_objective_id>${Colors.RESET}")
+        } else {
+            try {
+                val parentObjectiveId = tokens[2].toInt()
+
+                // Build the update plan
+                val plan = objectiveService.buildChildrenUpdatePreview(parentObjectiveId)
+
+                if (plan == null) {
+                    val parent = objectiveService.getObjective(parentObjectiveId)
+                    println("${Colors.YELLOW}No children found for objective $parentObjectiveId (\"${parent.description}\")${Colors.RESET}")
+                    return
+                }
+
+                // Show preview
+                val preview = objectiveService.formatChildrenUpdatePreview(plan)
+                print("${Colors.CYAN}$preview${Colors.RESET}")
+                print("${Colors.YELLOW}Proceed with updates? (y/N): ${Colors.RESET}")
+
+                val confirmation = lineReader.readLine()
+                if (confirmation.lowercase() == "y" || confirmation.lowercase() == "yes") {
+                    println("${Colors.YELLOW}Updating child objectives...${Colors.RESET}")
+                    val result = objectiveService.executeChildrenUpdate(plan)
+                    println("${Colors.GREEN}$result${Colors.RESET}")
+                } else {
+                    println("${Colors.YELLOW}Update cancelled.${Colors.RESET}")
+                }
+
+            } catch (e: NumberFormatException) {
+                println("${Colors.RED}Invalid objective ID: ${tokens[2]}${Colors.RESET}")
+            } catch (e: IllegalStateException) {
+                println("${Colors.RED}Error: ${e.message}${Colors.RESET}")
+            } catch (e: Exception) {
+                println("${Colors.RED}Error updating child progress: ${e.message}${Colors.RESET}")
+                e.printStackTrace()
+            }
+        }
+    }
+
     private fun buildTeamClonePreview(
         sourceObjective: com.sonatype.darylhandley.fifteenfiveutils.model.Objective,
         teamName: String,
@@ -851,6 +894,7 @@ class ShellApp {
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET}${" ".repeat(17)} - Clone objective to another user")
         println("  ${Colors.YELLOW}objectives teamclone${Colors.RESET} ${Colors.DIM}<id> <team>${Colors.RESET}${" ".repeat(13)} - Clone objective to all team members")
         println("  ${Colors.YELLOW}objectives updateprogress${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(14)} - Copy key result progress from parent")
+        println("  ${Colors.YELLOW}objectives updatechildprogress${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(9)} - Update all children to match parent progress")
         println()
         println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET}${" ".repeat(12)} - Create user alias")

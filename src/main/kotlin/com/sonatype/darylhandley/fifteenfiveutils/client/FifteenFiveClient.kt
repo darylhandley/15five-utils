@@ -5,7 +5,6 @@ import com.sonatype.darylhandley.fifteenfiveutils.model.ObjectivesResponse
 import com.sonatype.darylhandley.fifteenfiveutils.model.User
 import feign.Headers
 import feign.Param
-import feign.QueryMap
 import feign.RequestLine
 
 interface FifteenFiveClient {
@@ -35,15 +34,12 @@ interface FifteenFiveClient {
     @Headers("Cookie: sessionid={sessionId}")
     fun getObjective(@Param("id") id: Int, @Param("sessionId") sessionId: String): Objective
 
-    @RequestLine("POST /objectives/ajax/update-key-result/")
-    @Headers(
-        "Cookie: sessionid={sessionId}",
-        "X-CSRFToken: {csrfToken}",
-        "Content-Type: application/x-www-form-urlencoded"
-    )
-    fun updateKeyResult(
-        @QueryMap params: Map<String, Any>,
-        @Param("sessionId") sessionId: String,
-        @Param("csrfToken") csrfToken: String
-    )
+    @RequestLine("GET /objectives/api/objectives/?page={page}&page_size={pageSize}&state=current&parent_id={parentId}")
+    @Headers("Cookie: sessionid={sessionId}")
+    fun getObjectivesByParent(
+        @Param("page") page: Int,
+        @Param("pageSize") pageSize: Int,
+        @Param("parentId") parentId: Int,
+        @Param("sessionId") sessionId: String
+    ): ObjectivesResponse
 }
