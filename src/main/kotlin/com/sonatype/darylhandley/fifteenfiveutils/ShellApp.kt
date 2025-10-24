@@ -99,6 +99,7 @@ class ShellApp {
             "objectives listbyteam -v",
             "objectives get",
             "objectives clone",
+            "objectives teamclone",
             "useralias create",
             "useralias createbysearch",
             "useralias list",
@@ -209,9 +210,10 @@ class ShellApp {
             "listbyteam" -> handleObjectivesListByTeamCommand(tokens)
             "get" -> handleObjectivesGetCommand(tokens)
             "clone" -> handleObjectivesCloneCommand(tokens)
+            "teamclone" -> handleObjectivesTeamCloneCommand(tokens)
             else -> {
                 println("${Colors.RED}Unknown objectives subcommand: ${tokens[1]}${Colors.RESET}")
-                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone> [args...]${Colors.RESET}")
+                println("${Colors.RED}Usage: objectives <list|listbyuser|listbyteam|get|clone|teamclone> [args...]${Colors.RESET}")
             }
         }
     }
@@ -447,6 +449,168 @@ class ShellApp {
         }
     }
 
+    private fun handleObjectivesTeamCloneCommand(tokens: List<String>) {
+        if (tokens.size != 4) {
+            println("${Colors.RED}Usage: objectives teamclone <objective_id> <team_name>${Colors.RESET}")
+        } else {
+            try {
+                val objectiveId = tokens[2].toInt()
+                val teamName = tokens[3]
+
+                // Get source objective
+                val sourceObjective = objectiveService.getObjective(objectiveId)
+
+                // Get team members
+                val teamMembers = teamsService.getTeamMembers(teamName)
+                if (teamMembers == null) {
+                    println("${Colors.RED}Team '$teamName' not found.${Colors.RESET}")
+                    return
+                }
+
+                if (teamMembers.isEmpty()) {
+                    println("${Colors.RED}Team '$teamName' has no members.${Colors.RESET}")
+                    return
+                }
+
+                // Resolve team members to user IDs and check for duplicates
+                val validUsers = mutableListOf<Triple<String, Int, String>>() // alias, userId, userName
+                val skippedUsers = mutableListOf<Triple<String, String, String>>() // alias, userName, reason
+                val unresolvedAliases = mutableListOf<String>()
+
+                teamMembers.forEach { alias ->
+                    val userId = aliasService.resolveUserIdentifier(alias)
+                    if (userId == null) {
+                        unresolvedAliases.add(alias)
+                    } else {
+                        val userName = userService.getUserById(userId)?.fullName ?: "User ID $userId"
+
+                        // Check for duplicates
+                        try {
+                            val existingObjectives = objectiveService.listObjectivesByUser(userId)
+                            val duplicates = existingObjectives.filter {
+                                it.description.equals(sourceObjective.description, ignoreCase = true)
+                            }
+
+                            if (duplicates.isNotEmpty()) {
+                                skippedUsers.add(Triple(alias, userName, "duplicate found"))
+                            } else {
+                                validUsers.add(Triple(alias, userId, userName))
+                            }
+                        } catch (e: Exception) {
+                            skippedUsers.add(Triple(alias, userName, "error checking duplicates: ${e.message}"))
+                        }
+                    }
+                }
+
+                // Handle unresolved aliases
+                if (unresolvedAliases.isNotEmpty()) {
+                    println("${Colors.YELLOW}⚠️  Warning: Could not resolve aliases: ${unresolvedAliases.joinToString(", ")}${Colors.RESET}")
+                }
+
+                // Check if we have any valid users to clone to
+                if (validUsers.isEmpty()) {
+                    println("${Colors.RED}No valid users to clone to. All team members either have duplicates or couldn't be resolved.${Colors.RESET}")
+                    return
+                }
+
+                // Show summarized preview
+                val preview = buildTeamClonePreview(sourceObjective, teamName, validUsers, skippedUsers)
+                print("${Colors.CYAN}$preview${Colors.RESET}")
+
+                val confirmation = lineReader.readLine()
+                if (confirmation.lowercase() == "y" || confirmation.lowercase() == "yes") {
+                    println("${Colors.YELLOW}Cloning objective to team...${Colors.RESET}")
+
+                    var successCount = 0
+                    for ((index, user) in validUsers.withIndex()) {
+                        val (alias, userId, userName) = user
+                        println("${Colors.DIM}Cloning to user ${index + 1}/${validUsers.size}: $userName...${Colors.RESET}")
+
+                        try {
+                            objectiveCloneService.cloneObjective(sourceObjective, userId)
+                            println("${Colors.GREEN}✅ Cloned successfully to $userName ($alias)${Colors.RESET}")
+                            successCount++
+                        } catch (e: Exception) {
+                            println("${Colors.RED}❌ FAILED: Error cloning to $userName ($alias): ${e.message}${Colors.RESET}")
+                            // Fail-fast: stop on first error
+                            break
+                        }
+                    }
+
+                    // Summary report
+                    val totalAttempted = validUsers.size
+                    val totalSkipped = skippedUsers.size + unresolvedAliases.size
+                    val totalTeamMembers = teamMembers.size
+
+                    println("\n${Colors.CYAN}${"═".repeat(60)}${Colors.RESET}")
+                    if (successCount == totalAttempted) {
+                        println("${Colors.GREEN}✅ Successfully cloned to $successCount/$totalTeamMembers team members${Colors.RESET}")
+                    } else {
+                        println("${Colors.YELLOW}⚠️  Partially completed: $successCount/$totalAttempted successful clones${Colors.RESET}")
+                    }
+
+                    if (totalSkipped > 0) {
+                        println("${Colors.DIM}   ($totalSkipped members skipped)${Colors.RESET}")
+                    }
+                    println("${Colors.CYAN}${"═".repeat(60)}${Colors.RESET}")
+
+                } else {
+                    println("${Colors.YELLOW}Team clone cancelled.${Colors.RESET}")
+                }
+
+            } catch (e: NumberFormatException) {
+                println("${Colors.RED}Invalid objective ID: ${tokens[2]}${Colors.RESET}")
+            } catch (e: Exception) {
+                println("${Colors.RED}Error cloning objective to team: ${e.message}${Colors.RESET}")
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun buildTeamClonePreview(
+        sourceObjective: com.sonatype.darylhandley.fifteenfiveutils.model.Objective,
+        teamName: String,
+        validUsers: List<Triple<String, Int, String>>, // alias, userId, userName
+        skippedUsers: List<Triple<String, String, String>> // alias, userName, reason
+    ): String {
+        val result = StringBuilder()
+
+        result.append("═".repeat(80)).append("\n")
+        result.append("📋 TEAM CLONE PREVIEW\n")
+        result.append("═".repeat(80)).append("\n")
+
+        result.append("📝 Objective: \"${sourceObjective.description}\" (ID: ${sourceObjective.id})\n")
+        result.append("👤 From: ${sourceObjective.user.name}\n")
+        result.append("📅 Period: ${sourceObjective.getFormattedStartDate()} → ${sourceObjective.getFormattedEndDate()}\n")
+
+        if (sourceObjective.tags.isNotEmpty()) {
+            result.append("🏷️  Tags: ${sourceObjective.getTagNames()}\n")
+        }
+
+        result.append("🔑 Key Results: ${sourceObjective.keyResults.size}\n")
+
+        result.append("\n👥 Team: $teamName (${validUsers.size + skippedUsers.size} members)\n")
+
+        if (validUsers.isNotEmpty()) {
+            result.append("✅ Will clone to (${validUsers.size}):\n")
+            validUsers.forEach { (alias, _, userName) ->
+                result.append("   • $userName ($alias)\n")
+            }
+        }
+
+        if (skippedUsers.isNotEmpty()) {
+            result.append("⚠️  Skipping (${skippedUsers.size}):\n")
+            skippedUsers.forEach { (alias, userName, reason) ->
+                result.append("   • $userName ($alias) - $reason\n")
+            }
+        }
+
+        result.append("\n").append("═".repeat(80)).append("\n")
+        result.append("Clone to ${validUsers.size} users? (y/N): ")
+
+        return result.toString()
+    }
+
     private fun handleUserAliasCommand(tokens: List<String>) {
         if (tokens.size < 2) {
             println("${Colors.RED}Usage: useralias <create|createbysearch|list|delete> [args...]${Colors.RESET}")
@@ -657,6 +821,7 @@ class ShellApp {
         println("    ${Colors.DIM}Use -verbose or -v for detailed view instead of compact table${Colors.RESET}")
         println("  ${Colors.YELLOW}objectives get${Colors.RESET} ${Colors.DIM}<id>${Colors.RESET}${" ".repeat(26)} - Get single objective by ID")
         println("  ${Colors.YELLOW}objectives clone${Colors.RESET} ${Colors.DIM}<id> <user>${Colors.RESET}${" ".repeat(17)} - Clone objective to another user")
+        println("  ${Colors.YELLOW}objectives teamclone${Colors.RESET} ${Colors.DIM}<id> <team>${Colors.RESET}${" ".repeat(13)} - Clone objective to all team members")
         println()
         println("${Colors.BOLD}${Colors.CYAN}User Aliases:${Colors.RESET}")
         println("  ${Colors.YELLOW}useralias create${Colors.RESET} ${Colors.DIM}<alias> <userid>${Colors.RESET}${" ".repeat(12)} - Create user alias")
