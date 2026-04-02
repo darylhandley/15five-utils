@@ -1,24 +1,24 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveClient
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
 import com.sonatype.darylhandley.fifteenfiveutils.model.Objective
 import feign.Feign
 import feign.jackson.JacksonDecoder
 import feign.jackson.JacksonEncoder
 import feign.okhttp.OkHttpClient
-import okhttp3.FormBody
-import okhttp3.Request
 import kotlin.math.min
 
-class ObjectiveService(private val sessionId: String, private val csrfToken: String) {
+class ObjectiveService(
+    private val sessionId: String,
+    private val formClient: FifteenFiveFormClient
+) {
 
     private val client: FifteenFiveClient = Feign.builder()
         .client(OkHttpClient())
         .encoder(JacksonEncoder())
         .decoder(JacksonDecoder())
         .target(FifteenFiveClient::class.java, "https://sonatype.15five.com")
-
-    private val httpClient = okhttp3.OkHttpClient()
 
     fun listObjectives(limit: Int): List<Objective> {
         val allObjectives = mutableListOf<Objective>()
@@ -87,30 +87,13 @@ class ObjectiveService(private val sessionId: String, private val csrfToken: Str
 
     /**
      * Updates a single key result with a new value via the 15Five API.
+     * Delegates to the form client for the actual API call.
      * @param keyResultId The ID of the key result to update
      * @param newValue The new value to set
      * @throws RuntimeException if the API call fails
      */
     private fun updateKeyResult(keyResultId: Int, newValue: Int) {
-        val formData = FormBody.Builder()
-            .add("key_result_id", keyResultId.toString())
-            .add("value", newValue.toString())
-            .build()
-
-        val request = Request.Builder()
-            .url("https://sonatype.15five.com/objectives/ajax/update-key-result/")
-            .post(formData)
-            .header("Origin", "https://sonatype.15five.com")
-            .header("Referer", "https://sonatype.15five.com/objectives/")
-            .header("X-CSRFToken", csrfToken)
-            .header("Cookie", "ff_csrf_token=${csrfToken}; sessionid=${sessionId};")
-            .build()
-
-        val response = httpClient.newCall(request).execute()
-
-        if (!response.isSuccessful) {
-            throw RuntimeException("Failed to update key result $keyResultId: ${response.code} ${response.message}")
-        }
+        formClient.updateKeyResult(keyResultId, newValue)
     }
 
     fun updateProgressFromParent(childObjectiveId: Int): String {

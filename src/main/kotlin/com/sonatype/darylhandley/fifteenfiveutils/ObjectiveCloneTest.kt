@@ -1,5 +1,6 @@
 package com.sonatype.darylhandley.fifteenfiveutils
 
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
 import com.sonatype.darylhandley.fifteenfiveutils.service.AliasService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveCloneService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveService
@@ -27,7 +28,8 @@ object ObjectiveCloneTest {
             // Initialize services
             println("\n🔧 Initializing services...")
             val userService = UserService(sessionId)
-            val objectiveService = ObjectiveService(sessionId, csrfToken)
+            val formClient = FifteenFiveFormClient(sessionId, csrfToken)
+            val objectiveService = ObjectiveService(sessionId, formClient)
             val objectiveCloneService = ObjectiveCloneService(sessionId)
             val aliasService = AliasService(userService)
             println("✅ Services initialized")

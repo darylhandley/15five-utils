@@ -1,5 +1,6 @@
 package com.sonatype.darylhandley.fifteenfiveutils
 
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
 import com.sonatype.darylhandley.fifteenfiveutils.commands.Command
 import com.sonatype.darylhandley.fifteenfiveutils.commands.objectives.*
 import com.sonatype.darylhandley.fifteenfiveutils.commands.teams.*
@@ -71,7 +72,8 @@ class ShellApp {
 
         // Initialize services
         userService = UserService(sessionId)
-        objectiveService = ObjectiveService(sessionId, csrfToken)
+        val formClient = FifteenFiveFormClient(sessionId, csrfToken)
+        objectiveService = ObjectiveService(sessionId, formClient)
         objectiveCloneService = ObjectiveCloneService(sessionId)
         aliasService = AliasService(userService)
         teamsService = TeamsService(userService, aliasService)

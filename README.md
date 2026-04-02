@@ -44,19 +44,20 @@ Instructions here are for Chrome.
 
 1. Go to objectives page in 15Five. https://sonatype.15five.com/objectives/dashboard/?filters=redesign&state=current
 2. Open developer toolbar
-3. Click on Application and on the left bar naviagte to Storage -> Cookies -> https://sonatype.15five.com/
-4. Type sessionid in the filter to look for cookie sessionid 
-5. Copy the value into your application.properties file under the key `sessionid`
-6. Repeat steps 4 and 5 for the cookie ff_csrf_token
+3. Click on Application tab at top of developer bar
+4. On the left bar naviagte to Storage -> Cookies -> https://sonatype.15five.com/
+5. Type sessionid in the filter to look for cookie sessionid 
+6. Copy the value into your application.properties file under the key `sessionid`
+7. Repeat steps 5 and 6 for the cookie ff_csrf_token
 
 
 #### Get csrfmiddlewaretoken
 
 We get the csrfmiddleware token from the create objective form. 
 
-1. Go to create objectives page in 15Five
+1. Go to create objectives page in 15Five. https://sonatype.15five.com/objectives/create/
 2. Open the developer toolbar 
-3. Go to Elements
+3. Go to Elements in the top nav bar
 4. Hit Cmd+F to search 
 5. Type csrfmiddlewaretoken
 6. Find the hidden field and copy the value into your application.properties file under the key `csrfmiddlewaretoken`
@@ -94,7 +95,6 @@ Once the shell starts, you'll see:
 ```
 15five> help
 Available commands:
-  echo <message>  - Echo the message back
   help           - Show this help
   quit/exit      - Exit the shell
 ──────────────────────────────
@@ -123,12 +123,13 @@ This shell will be extended to interact with the 15Five application, providing c
 
 ## Development Notes
 
-The application uses ANSI escape codes for terminal colors. If you're running in an environment that doesn't support ANSI colors, you may see escape sequences in the output instead of colored text.
+The application uses ANSI escape codes for terminal colors. If you're running in an environment that doesn't support 
+ANSI colors, you may see escape sequences in the output instead of colored text.
 
 ## Maven Configuration
 
 The project is configured with:
 - Kotlin Maven plugin for compilation
 - Exec Maven plugin for easy execution
-- Java 11 compatibility
+- Java 21 compatibility
 - Proper source directory configuration for Kotlin files 
