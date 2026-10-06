@@ -1,17 +1,14 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveHttp
 import com.sonatype.darylhandley.fifteenfiveutils.model.Objective
-import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import okhttp3.FormBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class ObjectiveCloneService(private val sessionId: String) {
-
-    private val httpClient = OkHttpClient()
+class ObjectiveCloneService(private val http: FifteenFiveHttp) {
     fun cloneObjective(sourceObjective: Objective, targetUserId: Int): Int {
         val formData = buildFormData(sourceObjective, targetUserId)
         val responseUrl = submitObjectiveForm(formData)
@@ -51,8 +48,8 @@ class ObjectiveCloneService(private val sessionId: String) {
     private fun buildFormData(sourceObjective: Objective, targetUserId: Int): FormBody {
         val formBuilder = FormBody.Builder()
 
-        // CSRF token from configuration
-        formBuilder.add("csrfmiddlewaretoken", ConfigLoader.getCsrfMiddlewareToken())
+        // Self-generated CSRF token; must match the ff_csrf_token cookie set by FifteenFiveHttp
+        formBuilder.add("csrfmiddlewaretoken", http.csrfToken)
 
         // Django formset management for key results
         formBuilder.add("key-result-TOTAL_FORMS", sourceObjective.keyResults.size.toString())
@@ -112,52 +109,36 @@ class ObjectiveCloneService(private val sessionId: String) {
         return outputFormat.format(date ?: Date())
     }
 
+    /**
+     * Posts the Django create-objective form. On success Django answers with a 302 redirect to the new
+     * objective's details page (we don't follow redirects), so the new ID is read from the Location header.
+     * A 200 means the form was re-rendered with validation errors.
+     * @return the redirect location (absolute or relative)
+     */
     private fun submitObjectiveForm(formData: FormBody): String {
-        // Debug: Print form data being sent
-        //        println("Form data being sent:")
-        //        for (i in 0 until formData.size) {
-        //            println("  ${formData.name(i)}=${formData.value(i)}")
-        //        }
-
-        val ffCsrfToken = ConfigLoader.getCsrfMiddlewareToken()
-        val xCSRFToken = ConfigLoader.getCsrfMiddlewareToken()
-
         val request = Request.Builder()
-            .url("https://sonatype.15five.com/objectives/create/")
+            .url("${FifteenFiveHttp.BASE_URL}/objectives/create/")
             .post(formData)
-            .header("Origin", "https://sonatype.15five.com")
-            .header("Referer", "https://sonatype.15five.com/objectives/create/")
-            .header("Cookie", "ff_csrf_token=${ffCsrfToken}; sessionid=${sessionId};")
+            .header("Referer", "${FifteenFiveHttp.BASE_URL}/objectives/create/")
             .build()
 
-        val response = httpClient.newCall(request).execute()
-
-        //        println(
-        //          "Response: ${response.code} ${response.message}\n" +
-        //          "Headers: ${response.headers}\n"
-        //        )
-
-        val body = response.body?.string()
-
-        // Write response body to file at project root for debugging
-        // you can see form errors by opening the file in a browser
-        //        if (body != null) {
-        //          File("create_response.html").writeText(body)
-        //        }
-
-        if (!response.isSuccessful) {
-            throw RuntimeException("Failed to create objective: ${response.code} ${response.body?.string()}")
+        http.okHttp.newCall(request).execute().use { response ->
+            if (response.isRedirect) {
+                return response.header("Location")
+                    ?: throw RuntimeException("Create objective redirected without a Location header")
+            }
+            if (response.code == 200) {
+                // Uncomment to inspect form errors in a browser:
+                // java.io.File("create_response.html").writeText(response.body?.string() ?: "")
+                throw RuntimeException("Create objective form was rejected (HTTP 200, form re-rendered — likely a validation error)")
+            }
+            throw RuntimeException("Failed to create objective: ${response.code} ${response.message}")
         }
-
-        val url = response.request.url.toString()
-        //        println("Response URL: $url")
-
-        return url
     }
 
     private fun parseObjectiveIdFromUrl(url: String): Int {
         // URL format: https://sonatype.15five.com/objectives/details/12885743/
-        val objectiveIdRegex = Regex("/objectives/details/(\\d+)/")
+        val objectiveIdRegex = Regex("/objectives/details/(\\d+)")
         val match = objectiveIdRegex.find(url)
 
         return if (match != null) {

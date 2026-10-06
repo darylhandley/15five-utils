@@ -1,26 +1,17 @@
 package com.sonatype.darylhandley.fifteenfiveutils.service
 
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveClient
+import com.sonatype.darylhandley.fifteenfiveutils.auth.SessionExpiredException
 import com.sonatype.darylhandley.fifteenfiveutils.model.User
-import feign.Feign
-import feign.jackson.JacksonDecoder
-import feign.jackson.JacksonEncoder
-import feign.okhttp.OkHttpClient
 
-class UserService(private val sessionId: String) {
-
-    private val client: FifteenFiveClient = Feign.builder()
-        .client(OkHttpClient())
-        .encoder(JacksonEncoder())
-        .decoder(JacksonDecoder())
-        .target(FifteenFiveClient::class.java, "https://sonatype.15five.com")
+class UserService(private val client: FifteenFiveClient) {
 
     // Cache fields
     private var cachedUsers: List<User>? = null
     private var cachedUserMap: Map<Int, User>? = null
 
     private fun loadUsersFromAPI(): List<User> {
-        return client.getUsers(sessionId)
+        return client.getUsers()
     }
 
     private fun ensureCacheLoaded() {
@@ -47,6 +38,8 @@ class UserService(private val sessionId: String) {
             cachedUsers = users
             cachedUserMap = users.associateBy { it.id }
             "User cache refreshed successfully. Loaded ${users.size} users."
+        } catch (e: SessionExpiredException) {
+            throw e
         } catch (e: Exception) {
             "Failed to refresh user cache: ${e.message}. Using existing cached data."
         }

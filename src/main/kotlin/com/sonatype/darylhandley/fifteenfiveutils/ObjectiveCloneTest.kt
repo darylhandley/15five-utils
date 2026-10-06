@@ -1,11 +1,12 @@
 package com.sonatype.darylhandley.fifteenfiveutils
 
+import com.sonatype.darylhandley.fifteenfiveutils.auth.SessionStore
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveHttp
 import com.sonatype.darylhandley.fifteenfiveutils.service.AliasService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveCloneService
 import com.sonatype.darylhandley.fifteenfiveutils.service.ObjectiveService
 import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
-import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 
 object ObjectiveCloneTest {
 
@@ -20,17 +21,18 @@ object ObjectiveCloneTest {
         try {
             // Load configuration
             println("📋 Loading configuration...")
-            val sessionId = ConfigLoader.getSessionId()
-            val csrfToken = ConfigLoader.getCsrfMiddlewareToken()
-            println("✅ Session ID loaded: ${sessionId.take(10)}...")
-            println("✅ CSRF Token loaded: ${csrfToken.take(10)}...")
+            val store = SessionStore()
+            val sessionId = store.load()
+                ?: throw IllegalStateException("No session configured — run the shell and use 'auth' first")
+            println("✅ Session loaded from ${store.source}")
+            val http = FifteenFiveHttp(sessionId)
 
             // Initialize services
             println("\n🔧 Initializing services...")
-            val userService = UserService(sessionId)
-            val formClient = FifteenFiveFormClient(sessionId, csrfToken)
-            val objectiveService = ObjectiveService(sessionId, formClient)
-            val objectiveCloneService = ObjectiveCloneService(sessionId)
+            val userService = UserService(http.api)
+            val formClient = FifteenFiveFormClient(http)
+            val objectiveService = ObjectiveService(http.api, formClient)
+            val objectiveCloneService = ObjectiveCloneService(http)
             val aliasService = AliasService(userService)
             println("✅ Services initialized")
 
@@ -75,9 +77,7 @@ object ObjectiveCloneTest {
 
             // Additional debugging info
             println("\n🔍 DEBUGGING INFO:")
-            println("- Make sure your application.properties file contains both:")
-            println("  • fifteen.five.session.id=YOUR_SESSION_ID")
-            println("  • fifteen.five.csrf.token=YOUR_CSRF_TOKEN")
+            println("- Make sure you have a valid session (run the shell, then 'auth status')")
             println("- Make sure the 'daryl' alias exists (run: useralias list)")
             println("- Make sure objective $TEST_OBJECTIVE_ID exists and is accessible")
         }

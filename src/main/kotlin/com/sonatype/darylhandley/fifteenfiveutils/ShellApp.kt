@@ -1,7 +1,12 @@
 package com.sonatype.darylhandley.fifteenfiveutils
 
+import com.sonatype.darylhandley.fifteenfiveutils.auth.AuthService
+import com.sonatype.darylhandley.fifteenfiveutils.auth.SessionExpiredException
+import com.sonatype.darylhandley.fifteenfiveutils.auth.SessionStore
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
+import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveHttp
 import com.sonatype.darylhandley.fifteenfiveutils.commands.Command
+import com.sonatype.darylhandley.fifteenfiveutils.commands.auth.AuthCommand
 import com.sonatype.darylhandley.fifteenfiveutils.commands.objectives.*
 import com.sonatype.darylhandley.fifteenfiveutils.commands.teams.*
 import com.sonatype.darylhandley.fifteenfiveutils.commands.useralias.*
@@ -13,7 +18,6 @@ import com.sonatype.darylhandley.fifteenfiveutils.service.TeamsService
 import com.sonatype.darylhandley.fifteenfiveutils.service.UserService
 import com.sonatype.darylhandley.fifteenfiveutils.ui.Colors
 import com.sonatype.darylhandley.fifteenfiveutils.ui.ShellUI
-import com.sonatype.darylhandley.fifteenfiveutils.util.ConfigLoader
 import org.jline.reader.LineReader
 import org.jline.reader.LineReaderBuilder
 import org.jline.reader.impl.completer.StringsCompleter
@@ -28,6 +32,7 @@ class ShellApp {
     private lateinit var objectiveCloneService: ObjectiveCloneService
     private lateinit var aliasService: AliasService
     private lateinit var teamsService: TeamsService
+    private lateinit var authService: AuthService
     private lateinit var lineReader: LineReader
     private lateinit var terminal: Terminal
     private lateinit var ui: ShellUI
@@ -55,26 +60,17 @@ class ShellApp {
     }
 
     private fun initialize(): Boolean {
-        // Load configuration
-        val sessionId = try {
-            ConfigLoader.getSessionId()
-        } catch (e: Exception) {
-            println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
-            return false
-        }
-
-        val csrfToken = try {
-            ConfigLoader.getCsrfMiddlewareToken()
-        } catch (e: Exception) {
-            println("${Colors.RED}Configuration error: ${e.message}${Colors.RESET}")
-            return false
-        }
+        // Load session (~/.15fiveutils/session, falling back to legacy application.properties).
+        // A missing/expired session is not fatal: the shell starts and 'auth' can fix it.
+        val sessionStore = SessionStore()
+        val http = FifteenFiveHttp(sessionStore.load())
 
         // Initialize services
-        userService = UserService(sessionId)
-        val formClient = FifteenFiveFormClient(sessionId, csrfToken)
-        objectiveService = ObjectiveService(sessionId, formClient)
-        objectiveCloneService = ObjectiveCloneService(sessionId)
+        val formClient = FifteenFiveFormClient(http)
+        userService = UserService(http.api)
+        objectiveService = ObjectiveService(http.api, formClient)
+        objectiveCloneService = ObjectiveCloneService(http)
+        authService = AuthService(http, formClient, sessionStore)
         aliasService = AliasService(userService)
         teamsService = TeamsService(userService, aliasService)
 
@@ -101,6 +97,8 @@ class ShellApp {
             "quit",
             "exit",
             "q",
+            "auth",
+            "auth status",
             "users list",
             "users refresh",
             "objectives list",
@@ -142,7 +140,19 @@ class ShellApp {
         // Initialize command registry
         commands = initializeCommands()
 
+        printSessionStatus()
+
         return true
+    }
+
+    private fun printSessionStatus() {
+        val status = authService.check()
+        if (status.ok) {
+            ui.printSuccess("🔐 ${status.message}")
+        } else {
+            ui.printWarning("🔐 ${status.message}")
+        }
+        ui.printSeparator()
     }
 
     private fun runShell() {
@@ -167,9 +177,17 @@ class ShellApp {
                     commandKey != null && commands.containsKey(commandKey) -> {
                         try {
                             commands[commandKey]!!.execute(tokens)
+                        } catch (e: SessionExpiredException) {
+                            ui.printError("🔐 ${e.message}")
                         } catch (e: Exception) {
-                            ui.printError("Error executing command: ${e.message}")
-                            e.printStackTrace()
+                            val cause = generateSequence(e as Throwable) { it.cause }
+                                .firstOrNull { it is SessionExpiredException }
+                            if (cause != null) {
+                                ui.printError("🔐 ${cause.message}")
+                            } else {
+                                ui.printError("Error executing command: ${e.message}")
+                                e.printStackTrace()
+                            }
                         }
                     }
                     else -> {
@@ -203,6 +221,10 @@ class ShellApp {
 
     private fun initializeCommands(): Map<String, Command> {
         return mapOf(
+            // Auth
+            "auth" to AuthCommand(authService, ui),
+            "auth status" to AuthCommand(authService, ui),
+
             // Users commands
             "users list" to UsersListCommand(userService, ui),
             "users refresh" to UsersRefreshCommand(userService, ui),
@@ -265,6 +287,11 @@ class ShellApp {
             "General" to listOf(
                 HelpEntry("help/?", description = "Show this help"),
                 HelpEntry("quit/exit/q", description = "Exit the shell")
+            ),
+            "Auth" to listOf(
+                HelpEntry("auth", description = "Save sessionid cookie from clipboard (verified first)"),
+                HelpEntry("auth", "<sessionid>", "Save sessionid given inline"),
+                HelpEntry("auth status", description = "Check session (read) and CSRF write path (no-op)")
             ),
             "Users" to listOf(
                 HelpEntry("users list", description = "List all users"),

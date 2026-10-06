@@ -9,14 +9,19 @@ A Kotlin-based interactive command-line shell application for interacting with t
 ```
 src/main/kotlin/com/sonatype/darylhandley/fifteenfiveutils/
 ├── ShellApp.kt                    # Main application with JLine3 CLI
+├── auth/
+│   ├── AuthService.kt            # Validate / save / swap session; clipboard read
+│   ├── SessionStore.kt           # ~/.15fiveutils/session (600), legacy application.properties fallback
+│   └── SessionExpiredException.kt
 ├── client/
-│   └── FifteenFiveClient.kt      # Feign HTTP client interface
+│   ├── FifteenFiveHttp.kt        # Shared OkHttp + Feign stack: cookie/CSRF interceptor, no redirects, expiry detection
+│   ├── FifteenFiveClient.kt      # Feign read endpoints
+│   └── FifteenFiveFormClient.kt  # Form POSTs (update key result, no-op write probe)
 ├── model/
 │   └── User.kt                   # User data class matching 15Five API
 ├── service/
 │   └── UserService.kt            # Business logic for user operations
 └── util/
-    ├── ConfigLoader.kt           # Properties file configuration loader
     └── TableFormatter.kt         # ASCII table formatting utility
 ```
 
@@ -29,16 +34,17 @@ src/main/kotlin/com/sonatype/darylhandley/fifteenfiveutils/
 - **Table Formatting**: AsciiTable 0.3.2
 - **Target JVM**: Java 11
 
-## Configuration System
-- **Properties Files**:
-  - `application.properties` (gitignored) - Contains actual session ID and CSRF token
-  - `application.properties.sample` (committed) - Template configuration file
-- **Configuration Fields**:
-  - `fifteen.five.session.id` - 15Five session cookie for API authentication
-  - `fifteen.five.csrf.token` - CSRF token for objective creation/cloning
+## Authentication
+- Official 15Five Public API keys are Account-Admin-only and company-wide, so this app uses 15Five's internal web endpoints with the browser `sessionid` cookie.
+- Session stored in `~/.15fiveutils/session` (chmod 600) via the `auth` command (clipboard or inline, validated before saving). Legacy fallback: `fifteen.five.sessionid` in `./application.properties`.
+- CSRF: self-generated random token per run, sent as `ff_csrf_token` cookie + `X-CSRFToken` header + `csrfmiddlewaretoken` form field. Django double-submit check is not session-bound — verified: no token → 403, matching self-generated token → passes CSRF, mismatched → 403.
+- `FifteenFiveHttp` disables redirect-following (OkHttp **and** Feign `Request.Options`, which otherwise re-enables it). Expired session = 302 to `/?next=…` (pages, users endpoint) or 401/403 (JSON endpoints) → `SessionExpiredException` → shell prints "run 'auth'".
+- Create objective (`/objectives/create/`) succeeds with a 302 to `/objectives/details/<id>/`; the new ID is parsed from `Location`. A 200 means the form re-rendered with validation errors.
 
 ## Available Commands
 - `help` - Show available commands and shell features
+- `auth` / `auth <sessionid>` - Save + verify the 15Five session (clipboard by default)
+- `auth status` - Check session (read) and write path (no-op CSRF probe)
 - `echo <message>` - Echo message back to console
 - `users list` - List all users from 15Five API
 - `users list <search>` - Search users by name or title (no quotes needed)
@@ -101,15 +107,15 @@ mvn compile exec:java
 ```
 
 ## Development Notes
-- **Session ID**: Obtain from browser cookies after logging into 15Five
-- **CSRF Token**: Obtain from objectives create form for cloning functionality
-- **Error Handling**: Currently crashes on errors (by design for simplicity)
+- **Session ID**: Copy the `sessionid` cookie from the browser, run `auth`
+- **CSRF Token**: Generated automatically — nothing to copy
+- **Error Handling**: Command errors are printed; an expired session prints a re-auth hint
 
 ## Testing & Debugging
 - **ObjectiveCloneTest**: Standalone test for troubleshooting objective cloning
   - Tests cloning objective 12872510 to user alias "daryl"
   - Provides detailed debugging output
-  - Run with: `mvn exec:java@test-clone`
+  - Run with: `mvn exec:java@test-clone` (needs a saved session — run `auth` in the shell first)
 - **Search**: Filters by user's `fullName` and `title` fields
 - **Table Output**: Shows User ID, Full Name, Title, and Active status
 - **Command Parsing**: Simple string-based matching with `when` expressions
@@ -120,8 +126,7 @@ mvn compile exec:java
 ├── .gitignore                    # Excludes application.properties
 ├── pom.xml                       # Maven configuration with all dependencies  
 ├── README.md                     # Project documentation
-├── sample.properties             # Configuration template
-├── application.properties        # Actual config (gitignored)
+├── application.properties        # Legacy session fallback only (gitignored)
 └── src/main/
     ├── kotlin/...                # Source code (see package structure above)
     └── resources/sample_json/
@@ -150,4 +155,4 @@ mvn compile exec:java
 - `asciitable`
 
 ## Development Workflow
-The application uses a simple compile-run cycle. No hot reload currently implemented - manual restart required for code changes. The session ID is configured once in `application.properties` and reused across shell sessions.
+The application uses a simple compile-run cycle. No hot reload currently implemented - manual restart required for code changes. The session ID is saved once via `auth` to `~/.15fiveutils/session` and reused across shell sessions until it expires.

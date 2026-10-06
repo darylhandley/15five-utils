@@ -3,22 +3,13 @@ package com.sonatype.darylhandley.fifteenfiveutils.service
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveClient
 import com.sonatype.darylhandley.fifteenfiveutils.client.FifteenFiveFormClient
 import com.sonatype.darylhandley.fifteenfiveutils.model.Objective
-import feign.Feign
-import feign.jackson.JacksonDecoder
-import feign.jackson.JacksonEncoder
-import feign.okhttp.OkHttpClient
+import java.math.BigDecimal
 import kotlin.math.min
 
 class ObjectiveService(
-    private val sessionId: String,
+    private val client: FifteenFiveClient,
     private val formClient: FifteenFiveFormClient
 ) {
-
-    private val client: FifteenFiveClient = Feign.builder()
-        .client(OkHttpClient())
-        .encoder(JacksonEncoder())
-        .decoder(JacksonDecoder())
-        .target(FifteenFiveClient::class.java, "https://sonatype.15five.com")
 
     fun listObjectives(limit: Int): List<Objective> {
         val allObjectives = mutableListOf<Objective>()
@@ -26,7 +17,7 @@ class ObjectiveService(
         val pageSize = min(limit, 50) // API might have max page size limits
 
         while (allObjectives.size < limit) {
-            val response = client.getObjectives(page, pageSize, sessionId)
+            val response = client.getObjectives(page, pageSize)
             allObjectives.addAll(response.results)
 
             // If we got fewer results than requested or no next page, we're done
@@ -47,7 +38,7 @@ class ObjectiveService(
         val pageSize = 50
 
         while (true) {
-            val response = client.getObjectivesByUser(page, pageSize, userId, sessionId)
+            val response = client.getObjectivesByUser(page, pageSize, userId)
             allObjectives.addAll(response.results)
 
             // If no next page, we're done
@@ -67,7 +58,7 @@ class ObjectiveService(
         val pageSize = 50
 
         while (true) {
-            val response = client.getObjectivesByParent(page, pageSize, parentId, sessionId)
+            val response = client.getObjectivesByParent(page, pageSize, parentId)
             allObjectives.addAll(response.results)
 
             // If no next page, we're done
@@ -82,7 +73,7 @@ class ObjectiveService(
     }
 
     fun getObjective(id: Int): Objective {
-        return client.getObjective(id, sessionId)
+        return client.getObjective(id)
     }
 
     /**
@@ -92,8 +83,16 @@ class ObjectiveService(
      * @param newValue The new value to set
      * @throws RuntimeException if the API call fails
      */
-    private fun updateKeyResult(keyResultId: Int, newValue: Int) {
-        formClient.updateKeyResult(keyResultId, newValue)
+    private fun updateKeyResult(keyResultId: Int, newValue: String) {
+        formClient.updateKeyResult(keyResultId, toFormValue(newValue))
+    }
+
+    /**
+     * Normalises an API value such as "2.50" or "100.00" to a plain number string ("2.5", "100"),
+     * preserving decimals (previously truncated to Int).
+     */
+    internal fun toFormValue(apiValue: String): String {
+        return BigDecimal(apiValue.trim()).stripTrailingZeros().toPlainString()
     }
 
     fun updateProgressFromParent(childObjectiveId: Int): String {
@@ -119,8 +118,7 @@ class ObjectiveService(
             val parentKR = parentKeyResultsByDesc[childKR.description]
             if (parentKR != null) {
                 // Match found! Update child KR with parent's current_value
-                val value = parentKR.currentValue.toDouble().toInt()
-                updateKeyResult(childKR.id, value)
+                updateKeyResult(childKR.id, parentKR.currentValue)
                 updates.add("Updated \"${childKR.description}\" from ${childKR.currentValue} to ${parentKR.currentValue}")
             } else {
                 // No match - skip
@@ -248,8 +246,7 @@ class ObjectiveService(
                 val parentKR = plan.parentKeyResultsByDesc[childKR.description]
                 if (parentKR != null) {
                     // Match found! Update child KR with parent's current_value
-                    val value = parentKR.currentValue.toDouble().toInt()
-                    updateKeyResult(childKR.id, value)
+                    updateKeyResult(childKR.id, parentKR.currentValue)
                     updates.add("\"${childKR.description}\" from ${childKR.currentValue} to ${parentKR.currentValue}")
                 } else {
                     // No match - skip

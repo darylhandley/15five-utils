@@ -1,80 +1,51 @@
 package com.sonatype.darylhandley.fifteenfiveutils.client
 
 import okhttp3.FormBody
-import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Response
 
 /**
- * Client for making form-based POST requests to the 15Five API.
- * Uses raw OkHttp for operations not suitable for Feign (e.g., form posts with CSRF tokens).
+ * Form-based POST requests to 15Five's internal web endpoints.
+ * Cookies, CSRF and session-expiry handling come from the shared [FifteenFiveHttp] client.
  */
-class FifteenFiveFormClient(
-    private val sessionId: String,
-    private val csrfToken: String
-) {
-    private val httpClient = OkHttpClient()
-    private val baseUrl = "https://sonatype.15five.com"
+class FifteenFiveFormClient(private val http: FifteenFiveHttp) {
 
     /**
-     * Posts form data to the specified endpoint with proper authentication headers.
-     * @param endpoint The API endpoint (relative to base URL)
-     * @param formData Map of form field names to values
-     * @return The HTTP response
-     * @throws RuntimeException if the request fails
+     * Updates a single key result's current value.
+     * @param value Numeric value as a plain string (e.g. "3", "2.5") — decimals are preserved.
      */
-    private fun postForm(endpoint: String, formData: Map<String, String>): Response {
-        val formBody = FormBody.Builder().apply {
-            formData.forEach { (key, value) ->
-                add(key, value)
-            }
-        }.build()
-
-        val request = Request.Builder()
-            .url("$baseUrl$endpoint")
-            .post(formBody)
-            .header("Origin", baseUrl)
-            .header("Referer", "$baseUrl/objectives/")
-            .header("X-CSRFToken", csrfToken)
-            .header("Cookie", "ff_csrf_token=$csrfToken; sessionid=$sessionId;")
+    fun updateKeyResult(keyResultId: Int, value: String) {
+        val body = FormBody.Builder()
+            .add("key_result_id", keyResultId.toString())
+            .add("value", value)
             .build()
 
-        return httpClient.newCall(request).execute()
-    }
+        val request = Request.Builder()
+            .url("${FifteenFiveHttp.BASE_URL}/objectives/ajax/update-key-result/")
+            .post(body)
+            .build()
 
-    /**
-     * Posts form data and validates success, throwing exception on failure.
-     * @param endpoint The API endpoint
-     * @param formData Map of form field names to values
-     * @param errorMessage Custom error message prefix
-     * @throws RuntimeException if the API call fails
-     */
-    private fun postFormWithValidation(
-        endpoint: String,
-        formData: Map<String, String>,
-        errorMessage: String
-    ) {
-        val response = postForm(endpoint, formData)
-
-        if (!response.isSuccessful) {
-            throw RuntimeException("$errorMessage: ${response.code} ${response.message}")
+        http.okHttp.newCall(request).execute().use { response ->
+            if (!response.isSuccessful) {
+                throw RuntimeException("Failed to update key result $keyResultId: ${response.code} ${response.message}")
+            }
         }
     }
 
     /**
-     * Updates a single key result with a new value via the 15Five API.
-     * @param keyResultId The ID of the key result to update
-     * @param newValue The new value to set
-     * @throws RuntimeException if the API call fails
+     * Probes whether the CSRF + session combination is accepted for writes, without changing anything:
+     * posts an update for key result id 0, which does not exist. A 403 means CSRF was rejected (or the
+     * session is invalid — reported via SessionExpiredException); any other status means CSRF passed.
+     * @return the HTTP status returned for the no-op probe
      */
-    fun updateKeyResult(keyResultId: Int, newValue: Int) {
-        postFormWithValidation(
-            endpoint = "/objectives/ajax/update-key-result/",
-            formData = mapOf(
-                "key_result_id" to keyResultId.toString(),
-                "value" to newValue.toString()
-            ),
-            errorMessage = "Failed to update key result $keyResultId"
-        )
+    fun probeWriteAccess(): Int {
+        val body = FormBody.Builder()
+            .add("key_result_id", "0")
+            .add("value", "0")
+            .build()
+        val request = Request.Builder()
+            .url("${FifteenFiveHttp.BASE_URL}/objectives/ajax/update-key-result/")
+            .post(body)
+            .build()
+        return http.okHttp.newCall(request).execute().use { it.code }
     }
 }
