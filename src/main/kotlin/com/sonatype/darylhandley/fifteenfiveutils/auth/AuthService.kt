@@ -20,7 +20,7 @@ class AuthService(
     /** Cheap read to confirm the session works. Never throws. */
     fun check(): Status {
         if (http.sessionId == null) {
-            return Status(false, "No session configured. Copy the 'sessionid' cookie from your browser and run 'auth'.")
+            return Status(false, "No session configured. Copy the 'sessionid' cookie from your browser and run 'auth' (see 'help' for how).")
         }
         return try {
             http.api.getObjectives(1, 1)

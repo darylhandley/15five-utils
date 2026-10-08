@@ -291,7 +291,13 @@ class ShellApp {
             "Auth" to listOf(
                 HelpEntry("auth", description = "Save sessionid cookie from clipboard (verified first)"),
                 HelpEntry("auth", "<sessionid>", "Save sessionid given inline"),
-                HelpEntry("auth status", description = "Check session (read) and CSRF write path (no-op)")
+                HelpEntry("auth status", description = "Check session (read) and CSRF write path (no-op)"),
+                HelpEntry("", "", "Getting the sessionid cookie (Chrome):", indent = 4),
+                HelpEntry("", "", "1. Log into https://sonatype.15five.com", indent = 6),
+                HelpEntry("", "", "2. Open DevTools (Cmd+Option+I) → Application tab (under » if hidden)", indent = 6),
+                HelpEntry("", "", "3. Storage → Cookies → https://sonatype.15five.com", indent = 6),
+                HelpEntry("", "", "4. Filter for 'sessionid', double-click the Value cell, Cmd+C", indent = 6),
+                HelpEntry("", "", "5. Run 'auth' here (reads clipboard, verifies, saves). No restart needed.", indent = 6)
             ),
             "Users" to listOf(
                 HelpEntry("users list", description = "List all users"),

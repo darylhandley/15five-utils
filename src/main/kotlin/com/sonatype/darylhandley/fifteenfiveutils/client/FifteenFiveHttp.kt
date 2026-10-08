@@ -56,7 +56,7 @@ class FifteenFiveHttp(@Volatile var sessionId: String?) {
 
     private fun intercept(chain: Interceptor.Chain): Response {
         val session = sessionId
-            ?: throw SessionExpiredException("No 15Five session configured. Copy the 'sessionid' cookie from your browser and run 'auth'.")
+            ?: throw SessionExpiredException("No 15Five session configured. Copy the 'sessionid' cookie from your browser and run 'auth' (see 'help' for how).")
 
         val original = chain.request()
         val builder = original.newBuilder()
@@ -83,7 +83,7 @@ class FifteenFiveHttp(@Volatile var sessionId: String?) {
             response.close()
             val detail = if (isLoginRedirect) "redirected to login" else "HTTP ${response.code}"
             throw SessionExpiredException(
-                "15Five session expired or invalid ($detail). Copy a fresh 'sessionid' cookie from your browser and run 'auth'."
+                "15Five session expired or invalid ($detail). Copy a fresh 'sessionid' cookie from your browser and run 'auth' (see 'help' for how)."
             )
         }
     }
